@@ -1,4 +1,4 @@
-package com.proyecto.ganapp.ui.theme
+package com.proyecto.ganapp.ui.common.theme
 
 import androidx.compose.ui.graphics.Color
 
