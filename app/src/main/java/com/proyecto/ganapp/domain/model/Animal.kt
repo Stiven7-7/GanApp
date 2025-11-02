@@ -6,5 +6,6 @@ data class Animal(
     val edad: Int,
     val peso: Float,
     val color: String,
-    val idUsuario: Long
+    val idUsuario: Long,
+    val fotoUri: String?
 )

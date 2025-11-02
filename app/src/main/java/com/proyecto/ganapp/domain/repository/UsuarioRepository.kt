@@ -6,7 +6,6 @@ interface UsuarioRepository {
     suspend fun register(usuario: Usuario): Long
     suspend fun login(correo: String, contrasena: String): Usuario?
     suspend fun getUserById(id: Long): Usuario?
-
     suspend fun getUsuarioByCorreo(correo: String): Usuario?
 
 }

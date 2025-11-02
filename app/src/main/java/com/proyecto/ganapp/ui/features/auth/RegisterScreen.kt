@@ -11,12 +11,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.R
 import com.proyecto.ganapp.domain.model.Usuario
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun RegisterScreen(
@@ -28,10 +34,9 @@ fun RegisterScreen(
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
-
     val usuario by viewModel.usuario.collectAsState()
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    // Si el usuario se registró, regresamos al login
     LaunchedEffect(usuario) {
         if (usuario != null) onRegisterSuccess()
     }
@@ -117,18 +122,22 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+
             OutlinedTextField(
                 value = contrasena,
                 onValueChange = { contrasena = it },
                 label = { Text("Contraseña") },
-                placeholder = { Text("Ingresa tu contraseña") },
                 singleLine = true,
                 shape = RoundedCornerShape(50.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF00C853),
-                    unfocusedBorderColor = Color(0xFF81C784),
-                    focusedLabelColor = Color(0xFF00C853)
-                ),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 

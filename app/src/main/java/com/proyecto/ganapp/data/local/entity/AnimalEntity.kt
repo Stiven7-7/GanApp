@@ -24,6 +24,6 @@ data class AnimalEntity(
     val peso: Float,
     val color: String,
     val raza: String? = null,
-    val fotoUri: String? = null,
-    val idUsuario: Long
-)
+    val idUsuario: Long,
+    val fotoUri: String? = null
+    )

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
+import com.proyecto.ganapp.ui.features.home.HomeScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -33,8 +35,12 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
 
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginSuccess = { navController.navigate(Screen.Home.route) },
-                onNavigateToRegister = { navController.navigate(Screen.Register.route) }
+                onLoginSuccess = { idUsuario ->
+                    navController.navigate("home/$idUsuario")
+                },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
             )
         }
 
@@ -45,13 +51,36 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
             )
         }
 
-        composable(Screen.Home.route) {
-            Text("Bienvenido a GanApp 🐮", modifier = Modifier.padding(32.dp))
+        composable("home/{idUsuario}") { backStackEntry ->
+            val idUsuario = backStackEntry.arguments?.getString("idUsuario")?.toLong() ?: 0L
+            HomeScreen(
+                idUsuario = idUsuario,
+                onRegistrarAnimal = { navController.navigate("register_animal/$idUsuario") },
+                onVerAnimales = { navController.navigate("animals/$idUsuario") },
+                onNotificaciones = { navController.navigate("notifications/$idUsuario") }
+            )
         }
 
-        composable(Screen.Animals.route) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")?.toLongOrNull() ?: 0L
-            AnimalsScreen(userId = userId)
+        composable("register_animal/{idUsuario}") { backStackEntry ->
+            val idUsuario = backStackEntry.arguments?.getString("idUsuario")?.toLong() ?: 0L
+
+            RegisterAnimalScreen(
+                idUsuario = idUsuario,
+                onAnimalSaved = {
+                    navController.popBackStack() // vuelve al Home
+                }
+            )
+        }
+
+        composable("animals/{idUsuario}") { backStackEntry ->
+            val idUsuario = backStackEntry.arguments?.getString("idUsuario")?.toLong() ?: 0L
+
+            AnimalsScreen(
+                userId = idUsuario,
+                onAddAnimal = {
+                    navController.navigate("register_animal/$idUsuario")
+                }
+            )
         }
 
         composable(Screen.Notifications.route) { backStackEntry ->

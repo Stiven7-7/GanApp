@@ -96,6 +96,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
 
+    //bcrypt
+    implementation(libs.bcrypt)
+
     // Timber
     implementation(libs.timber)
 
@@ -103,4 +106,9 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    //icons
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.coil-kt:coil-compose:2.3.0")
+
 }

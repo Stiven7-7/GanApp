@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c66891a5387b992592797b9014e7a994",
+    "identityHash": "985e6be455e218f363d9288409d294f4",
     "entities": [
       {
         "tableName": "usuario",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idUsuario` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `apellido` TEXT NOT NULL, `correo` TEXT NOT NULL, `contrasena` TEXT NOT NULL, `fechaRegistro` INTEGER NOT NULL, `activo` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idUsuario` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `apellido` TEXT NOT NULL, `correo` TEXT NOT NULL, `contrasena` TEXT NOT NULL, `fechaRegistro` TEXT NOT NULL, `activo` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "idUsuario",
@@ -41,7 +41,7 @@
           {
             "fieldPath": "fechaRegistro",
             "columnName": "fechaRegistro",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -319,7 +319,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c66891a5387b992592797b9014e7a994')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '985e6be455e218f363d9288409d294f4')"
     ]
   }
 }

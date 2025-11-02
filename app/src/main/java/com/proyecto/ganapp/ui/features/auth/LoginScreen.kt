@@ -15,20 +15,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit = {},
+    onLoginSuccess: (Long) -> Unit = {},
     onNavigateToRegister: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     val loginResult by viewModel.loginResult.collectAsState()
+    val usuario by viewModel.usuario.collectAsState()
+    var passwordVisible by remember { mutableStateOf(false) }
+
 
     // Navega si el login es correcto
     LaunchedEffect(loginResult) {
-        if (loginResult == true) onLoginSuccess()
+        if (loginResult == true) {
+            usuario?.let {
+                onLoginSuccess(it.idUsuario) // ✅ se pasa el id del usuario
+            }
+        }
     }
 
     Surface(
@@ -77,10 +89,17 @@ fun LoginScreen(
                 value = contrasena,
                 onValueChange = { contrasena = it },
                 label = { Text("Contraseña") },
+                singleLine = true,
                 shape = RoundedCornerShape(50.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF00C853)
-                ),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 

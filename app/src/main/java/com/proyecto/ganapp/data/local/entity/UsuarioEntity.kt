@@ -3,6 +3,7 @@ package com.proyecto.ganapp.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.proyecto.ganapp.util.DateUtils
 
 @Entity(tableName = "usuario")
 data class UsuarioEntity(
@@ -12,6 +13,6 @@ data class UsuarioEntity(
     val apellido: String,
     val correo: String,
     @ColumnInfo(name = "contrasena") val contrasena: String,
-    val fechaRegistro: Long = System.currentTimeMillis(),
+    val fechaRegistro: String = DateUtils.currentDate(), // 👈 aquí guardamos el texto legible
     val activo: Boolean = true
 )

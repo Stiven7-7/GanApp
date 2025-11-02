@@ -22,6 +22,8 @@ interface AnimalDao {
     @Query("SELECT * FROM animal WHERE idUsuario = :userId")
     fun getByUser(userId: Long): Flow<List<AnimalEntity>>
 
+    @Query("SELECT * FROM animal WHERE idUsuario = :userId")
+    fun getAnimalsByUser(userId: Long): Flow<List<AnimalEntity>>
     @Query("SELECT * FROM animal")
     fun getAll(): Flow<List<AnimalEntity>>
 }

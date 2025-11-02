@@ -9,7 +9,8 @@ fun AnimalEntity.toDomain(): Animal = Animal(
     edad = edad,
     peso = peso,
     color = color,
-    idUsuario = idUsuario
+    idUsuario = idUsuario,
+    fotoUri = fotoUri
 )
 
 fun Animal.toEntity(): AnimalEntity = AnimalEntity(
@@ -18,5 +19,6 @@ fun Animal.toEntity(): AnimalEntity = AnimalEntity(
     edad = edad,
     peso = peso,
     color = color,
-    idUsuario = idUsuario
+    idUsuario = idUsuario,
+    fotoUri = fotoUri
 )

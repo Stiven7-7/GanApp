@@ -17,6 +17,10 @@ class AnimalRepositoryImpl @Inject constructor(
         return dao.getByUser(userId).map { list -> list.map { it.toDomain() } }
     }
 
+    override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> {
+        return dao.getByUser(userId).map { list -> list.map { it.toDomain() } }
+    }
+
     override suspend fun getAnimalById(id: Long): Animal? {
         return dao.getById(id)?.toDomain()
     }

@@ -30,8 +30,13 @@ class AuthViewModel @Inject constructor(
 
     fun login(correo: String, contrasena: String) {
         viewModelScope.launch {
-            val user = usuarioRepository.getUsuarioByCorreo(correo)
-            _loginResult.value = user?.contrasena == contrasena
+            val user = usuarioRepository.login(correo, contrasena)
+            if (user != null) {
+                _usuario.value = user
+                _loginResult.value = true
+            } else {
+                _loginResult.value = false
+            }
         }
     }
 
