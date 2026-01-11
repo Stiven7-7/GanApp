@@ -87,9 +87,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔘 Botón Notificaciones
+            // 🔔 Botón Notificaciones
             OutlinedButton(
-                onClick = onVerAnimales,
+                onClick = onNotificaciones,
                 border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF000000)),
                 shape = MaterialTheme.shapes.medium,
@@ -97,7 +97,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(60.dp)
             ) {
-                Text("Ver Animales", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Notificaciones", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

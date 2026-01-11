@@ -19,7 +19,7 @@ import com.proyecto.ganapp.data.local.entity.UsuarioEntity
         NotificacionEntity::class,
         NotificacionxAnimalEntity::class
     ],
-    version = 2,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(value = [DateConverters::class])

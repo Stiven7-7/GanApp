@@ -14,6 +14,7 @@ import com.proyecto.ganapp.domain.model.Notificacion
 @Composable
 fun NotificationsScreen(
     userId: Long,
+    onAddNotification: () -> Unit,
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val notifications by viewModel.notifications.collectAsState()
@@ -23,9 +24,19 @@ fun NotificationsScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Notificaciones") }) }
+        topBar = { TopAppBar(title = { Text("Notificaciones") }) },
+
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddNotification) {
+                Text("+")
+            }
+        }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+        ) {
             items(notifications) { noti ->
                 NotificationCard(noti)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -36,7 +47,10 @@ fun NotificationsScreen(
 
 @Composable
 fun NotificationCard(noti: Notificacion) {
-    Card(elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
+    Card(
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(noti.nombre, style = MaterialTheme.typography.titleMedium)
             Text("Tipo: ${noti.tipo}")
@@ -45,3 +59,4 @@ fun NotificationCard(noti: Notificacion) {
         }
     }
 }
+

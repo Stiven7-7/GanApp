@@ -13,18 +13,29 @@ class NotificacionRepositoryImpl @Inject constructor(
     private val dao: NotificacionDao
 ) : NotificacionRepository {
 
+    /** Obtener todas las notificaciones del usuario */
     override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> {
-        return dao.getAll().map { list -> list.filter { it.idUsuario == userId }.map { it.toDomain() } }
+        return dao.getAll().map { list ->
+            list.filter { it.idUsuario == userId }.map { it.toDomain() }
+        }
     }
 
+    /** Insertar una notificación */
     override suspend fun insertNotification(notificacion: Notificacion) {
         dao.insert(notificacion.toEntity())
     }
 
+    /** Actualizar una notificación */
+    override suspend fun updateNotification(notificacion: Notificacion) {
+        dao.update(notificacion.toEntity())
+    }
+
+    /** Eliminar una notificación */
     override suspend fun deleteNotification(id: Long) {
         dao.deleteById(id)
     }
 
+    /** Obtener una notificación por ID */
     override suspend fun getNotificationById(id: Long): Notificacion? {
         return dao.getById(id)?.toDomain()
     }

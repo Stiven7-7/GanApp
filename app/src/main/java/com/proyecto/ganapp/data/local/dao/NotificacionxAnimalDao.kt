@@ -8,23 +8,16 @@ import kotlinx.coroutines.flow.Flow
 interface NotificacionxAnimalDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(relacion: NotificacionxAnimalEntity): Long
+    suspend fun insert(link: NotificacionxAnimalEntity)
 
-    @Delete
-    suspend fun delete(relacion: NotificacionxAnimalEntity)
+    @Query("DELETE FROM notificacion_animal WHERE idAnimal = :idAnimal AND idNotificacion = :idNotificacion")
+    suspend fun delete(idAnimal: Long, idNotificacion: Long)
 
-    @Query("""
-        SELECT * FROM notificacion_animal 
-        WHERE idAnimal = :idAnimal
-    """)
-    fun getByAnimal(idAnimal: Long): Flow<List<NotificacionxAnimalEntity>>
+    @Query("SELECT * FROM notificacion_animal WHERE idAnimal = :idAnimal")
+    suspend fun getNotificacionesByAnimal(idAnimal: Long): List<NotificacionxAnimalEntity>
 
-    @Query("""
-        SELECT * FROM notificacion_animal 
-        WHERE idNotificacion = :idNotificacion
-    """)
-    fun getByNotificacion(idNotificacion: Long): Flow<List<NotificacionxAnimalEntity>>
+    @Query("SELECT * FROM notificacion_animal WHERE idNotificacion = :idNotificacion")
+    suspend fun getAnimalesByNotificacion(idNotificacion: Long): List<NotificacionxAnimalEntity>
 
-    @Query("DELETE FROM notificacion_animal WHERE idAnimal = :idAnimal")
-    suspend fun deleteByAnimal(idAnimal: Long)
 }
+

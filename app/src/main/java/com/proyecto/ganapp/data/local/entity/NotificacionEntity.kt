@@ -25,9 +25,12 @@ data class NotificacionEntity(
     val descripcion: String? = null,
     val fechaInicio: Long,
     val fechaFin: Long?,
-    val seRepite: String, // “NO”, “DIARIA”, “MENSUAL”, “ANUAL”
-    val hora: String? = null,
+    val seRepite: String,
+    val hora: String,
+    val dosisPorDia: Int? = null,
+    val intervaloHoras: Int? = null,
     val estado: String = "PENDIENTE",
     val fechaCreacion: Long = System.currentTimeMillis(),
     val idUsuario: Long
 )
+

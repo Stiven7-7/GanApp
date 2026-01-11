@@ -7,5 +7,8 @@ data class Notificacion(
     val fechaInicio: Long,
     val fechaFin: Long,
     val seRepite: String,
+    val hora: String,
+    val dosisPorDia: Int? = null,
+    val intervaloHoras: Int? = null,
     val idUsuario: Long
 )
