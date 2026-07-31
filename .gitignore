@@ -1,15 +1,61 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# Sistema operativo
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+Thumbs.db
+desktop.ini
+
+# Gradle y compilación
+.gradle/
+**/build/
+.externalNativeBuild/
+.cxx/
+
+# Configuración local Android
 local.properties
+
+# Android Studio / IntelliJ
+# No ignorar toda la carpeta .idea
+*.iml
+
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/shelf/
+
+# Configuración local de dispositivo y plugins
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/appInsightsSettings.xml
+.idea/studiobot.xml
+.idea/copilot.data.migration.*.xml
+
+# Artefactos Android
+*.apk
+*.aab
+*.ap_
+/captures/
+
+# Firma y secretos
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+secrets.properties
+.env
+.env.*
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Se versionan intencionalmente:
+# - app/schemas/
+# - docs/
+# - gradle/wrapper/
+# - archivos Gradle
+# - código, recursos y pruebas
