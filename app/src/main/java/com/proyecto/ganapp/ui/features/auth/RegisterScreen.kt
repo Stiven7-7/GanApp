@@ -44,6 +44,12 @@ fun RegisterScreen(
         viewModel.consumeRegistrationSuccess()
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.resetRegisterState()
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF9FFF9)

@@ -40,6 +40,12 @@ fun LoginScreen(
         viewModel.consumeLoginSuccess()
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.resetLoginState()
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF9FFF9)

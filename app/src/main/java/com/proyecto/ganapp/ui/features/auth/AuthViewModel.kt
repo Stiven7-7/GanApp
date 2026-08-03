@@ -83,6 +83,18 @@ class AuthViewModel @Inject constructor(
         _loginState.value = AuthLoginState.Idle
     }
 
+    fun resetLoginState() {
+        if (_loginState.value !is AuthLoginState.Loading) {
+            _loginState.value = AuthLoginState.Idle
+        }
+    }
+
+    fun resetRegisterState() {
+        if (_registerState.value !is AuthRegisterState.Loading) {
+            _registerState.value = AuthRegisterState.Idle
+        }
+    }
+
     fun logout() {
         _loginState.value = AuthLoginState.Idle
         _registerState.value = AuthRegisterState.Idle
