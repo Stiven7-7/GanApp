@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.R
-import com.proyecto.ganapp.domain.model.Usuario
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -23,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.proyecto.ganapp.domain.usecase.usuario.RegisterValidationError
 
 @Composable
 fun RegisterScreen(
@@ -34,11 +34,14 @@ fun RegisterScreen(
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
-    val usuario by viewModel.usuario.collectAsState()
+    val registerState by viewModel.registerState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    val isLoading = registerState is AuthRegisterState.Loading
 
-    LaunchedEffect(usuario) {
-        if (usuario != null) onRegisterSuccess()
+    LaunchedEffect(registerState) {
+        if (registerState !is AuthRegisterState.Success) return@LaunchedEffect
+        onRegisterSuccess()
+        viewModel.consumeRegistrationSuccess()
     }
 
     Surface(
@@ -84,6 +87,7 @@ fun RegisterScreen(
                     unfocusedBorderColor = Color(0xFF81C784),
                     focusedLabelColor = Color(0xFF00C853)
                 ),
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -100,6 +104,7 @@ fun RegisterScreen(
                     unfocusedBorderColor = Color(0xFF81C784),
                     focusedLabelColor = Color(0xFF00C853)
                 ),
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -117,6 +122,7 @@ fun RegisterScreen(
                     unfocusedBorderColor = Color(0xFF81C784),
                     focusedLabelColor = Color(0xFF00C853)
                 ),
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -131,13 +137,17 @@ fun RegisterScreen(
                 shape = RoundedCornerShape(50.dp),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible },
+                        enabled = !isLoading,
+                    ) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                         )
                     }
                 },
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -146,17 +156,16 @@ fun RegisterScreen(
             // 🔘 Botón crear cuenta
             Button(
                 onClick = {
-                    if (nombre.isNotBlank() && apellido.isNotBlank() && correo.isNotBlank() && contrasena.isNotBlank()) {
-                        val nuevoUsuario = Usuario(
-                            nombre = nombre,
-                            apellido = apellido,
-                            correo = correo,
-                            contrasena = contrasena
-                        )
-                        viewModel.register(nuevoUsuario)
-                        onRegisterSuccess()
-                    }
+                    // Temporal: confirmación = contraseña hasta el campo visual en Subfase 1.4.
+                    viewModel.register(
+                        name = nombre,
+                        lastName = apellido,
+                        email = correo,
+                        password = contrasena,
+                        passwordConfirmation = contrasena,
+                    )
                 },
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
                 shape = RoundedCornerShape(50.dp),
                 modifier = Modifier
@@ -167,6 +176,26 @@ fun RegisterScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            when (val state = registerState) {
+                is AuthRegisterState.ValidationError -> {
+                    Text(
+                        text = formatRegisterValidationErrors(state.errors),
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                AuthRegisterState.UnexpectedError -> {
+                    Text(
+                        text = "Ocurrió un error inesperado. Intenta de nuevo.",
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                else -> Unit
+            }
 
             // 🔗 Enlace a Login
             Row(
@@ -183,9 +212,26 @@ fun RegisterScreen(
                     "Inicia sesión",
                     color = Color(0xFF00C853),
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToLogin() }
+                    modifier = Modifier.clickable(enabled = !isLoading) { onNavigateToLogin() }
                 )
             }
+        }
+    }
+}
+
+private fun formatRegisterValidationErrors(errors: Set<RegisterValidationError>): String {
+    return errors.joinToString(separator = "\n") { error ->
+        when (error) {
+            RegisterValidationError.EMPTY_NAME -> "El nombre es obligatorio"
+            RegisterValidationError.EMPTY_LAST_NAME -> "El apellido es obligatorio"
+            RegisterValidationError.EMPTY_EMAIL -> "El correo es obligatorio"
+            RegisterValidationError.INVALID_EMAIL_FORMAT -> "El formato del correo no es válido"
+            RegisterValidationError.EMAIL_CONTAINS_WHITESPACE -> "El correo no debe contener espacios"
+            RegisterValidationError.EMPTY_PASSWORD -> "La contraseña es obligatoria"
+            RegisterValidationError.PASSWORD_TOO_SHORT -> "La contraseña debe tener al menos 8 caracteres"
+            RegisterValidationError.PASSWORD_TOO_LONG -> "La contraseña supera el máximo permitido"
+            RegisterValidationError.EMPTY_CONFIRMATION -> "La confirmación de contraseña es obligatoria"
+            RegisterValidationError.PASSWORD_MISMATCH -> "Las contraseñas no coinciden"
         }
     }
 }

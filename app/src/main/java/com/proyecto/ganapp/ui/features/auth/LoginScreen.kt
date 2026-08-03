@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
 
 @Composable
 fun LoginScreen(
@@ -29,18 +30,14 @@ fun LoginScreen(
 ) {
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
-    val loginResult by viewModel.loginResult.collectAsState()
-    val usuario by viewModel.usuario.collectAsState()
+    val loginState by viewModel.loginState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    val isLoading = loginState is AuthLoginState.Loading
 
-
-    // Navega si el login es correcto
-    LaunchedEffect(loginResult) {
-        if (loginResult == true) {
-            usuario?.let {
-                onLoginSuccess(it.idUsuario) // ✅ se pasa el id del usuario
-            }
-        }
+    LaunchedEffect(loginState) {
+        val success = loginState as? AuthLoginState.Success ?: return@LaunchedEffect
+        onLoginSuccess(success.authenticatedUser.idUsuario)
+        viewModel.consumeLoginSuccess()
     }
 
     Surface(
@@ -80,6 +77,7 @@ fun LoginScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF00C853)
                 ),
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -93,20 +91,25 @@ fun LoginScreen(
                 shape = RoundedCornerShape(50.dp),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible },
+                        enabled = !isLoading,
+                    ) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                         )
                     }
                 },
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.login(correo, contrasena) },
+                onClick = { viewModel.login(email = correo, password = contrasena) },
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
                 shape = RoundedCornerShape(50.dp),
                 modifier = Modifier
@@ -121,19 +124,47 @@ fun LoginScreen(
             Text(
                 text = "¿No tienes cuenta? Regístrate",
                 color = Color(0xFF00C853),
-                modifier = Modifier.clickable { onNavigateToRegister() }
+                modifier = Modifier.clickable(enabled = !isLoading) { onNavigateToRegister() }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Mensaje de error
-            if (loginResult == false) {
-                Text(
-                    text = "Correo o contraseña incorrectos",
-                    color = Color.Red,
-                    fontSize = 14.sp
-                )
+            when (val state = loginState) {
+                AuthLoginState.InvalidCredentials -> {
+                    Text(
+                        text = "Correo o contraseña incorrectos",
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                }
+                is AuthLoginState.ValidationError -> {
+                    Text(
+                        text = formatLoginValidationErrors(state.errors),
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                }
+                AuthLoginState.UnexpectedError -> {
+                    Text(
+                        text = "Ocurrió un error inesperado. Intenta de nuevo.",
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                }
+                else -> Unit
             }
+        }
+    }
+}
+
+private fun formatLoginValidationErrors(errors: Set<LoginValidationError>): String {
+    return errors.joinToString(separator = "\n") { error ->
+        when (error) {
+            LoginValidationError.EMPTY_EMAIL -> "El correo es obligatorio"
+            LoginValidationError.INVALID_EMAIL_FORMAT -> "El formato del correo no es válido"
+            LoginValidationError.EMAIL_CONTAINS_WHITESPACE -> "El correo no debe contener espacios"
+            LoginValidationError.EMPTY_PASSWORD -> "La contraseña es obligatoria"
+            LoginValidationError.PASSWORD_TOO_LONG -> "La contraseña supera el máximo permitido"
         }
     }
 }
