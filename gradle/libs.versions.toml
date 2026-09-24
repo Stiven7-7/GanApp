@@ -61,6 +61,7 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 # --- Coroutines (Programación asíncrona) ---
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 # --- Timber (Logging) ---
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
