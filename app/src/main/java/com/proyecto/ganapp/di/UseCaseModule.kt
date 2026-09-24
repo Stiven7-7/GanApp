@@ -6,6 +6,7 @@ import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalsUseCase
 import com.proyecto.ganapp.domain.usecase.animal.InsertAnimalUseCase
+import com.proyecto.ganapp.domain.usecase.session.ClearSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.ObserveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
@@ -66,6 +67,14 @@ object UseCaseModule {
             sessionRepository = sessionRepository,
             usuarioRepository = usuarioRepository,
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideClearSessionUseCase(
+        repository: SessionRepository,
+    ): ClearSessionUseCase {
+        return ClearSessionUseCase(repository)
     }
 
     // 🔔 Notificación UseCases
