@@ -2,13 +2,18 @@ package com.proyecto.ganapp.ui.features.auth
 
 import com.proyecto.ganapp.domain.model.Usuario
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
+import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
+import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterValidationError
 import com.proyecto.ganapp.testutil.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -28,14 +33,17 @@ class AuthViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repository: FakeUsuarioRepository
+    private lateinit var sessionRepository: FakeSessionRepository
     private lateinit var viewModel: AuthViewModel
 
     @Before
     fun setUp() {
         repository = FakeUsuarioRepository()
+        sessionRepository = FakeSessionRepository()
         viewModel = AuthViewModel(
             loginUseCase = LoginUseCase(repository),
             registerUserUseCase = RegisterUserUseCase(repository),
+            saveSessionUseCase = SaveSessionUseCase(sessionRepository),
         )
     }
 
@@ -95,6 +103,7 @@ class AuthViewModelTest {
         assertNull(state.generalError)
         assertFalse(state.isLoading)
         assertEquals(0, repository.loginCallCount)
+        assertEquals(0, sessionRepository.saveCallCount)
     }
 
     @Test
@@ -109,6 +118,7 @@ class AuthViewModelTest {
         assertNull(state.passwordError)
         assertNull(state.generalError)
         assertFalse(state.isLoading)
+        assertEquals(0, sessionRepository.saveCallCount)
     }
 
     @Test
@@ -123,6 +133,7 @@ class AuthViewModelTest {
         assertNull(state.emailError)
         assertNull(state.generalError)
         assertFalse(state.isLoading)
+        assertEquals(0, sessionRepository.saveCallCount)
     }
 
     @Test
@@ -138,6 +149,7 @@ class AuthViewModelTest {
         assertNull(state.emailError)
         assertNull(state.passwordError)
         assertFalse(state.isLoading)
+        assertEquals(0, sessionRepository.saveCallCount)
     }
 
     @Test
@@ -153,6 +165,7 @@ class AuthViewModelTest {
         assertNull(state.emailError)
         assertNull(state.passwordError)
         assertFalse(state.isLoading)
+        assertEquals(0, sessionRepository.saveCallCount)
     }
 
     @Test
@@ -271,6 +284,146 @@ class AuthViewModelTest {
         assertEquals("newPassword12", state.password)
         assertNull(state.generalError)
     }
+
+    @Test
+    fun lvmSession01_loginSuccess_guardaIdAntesDeEmitirEvento() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 7L)
+            sessionRepository.saveGate = CompletableDeferred()
+            val events = mutableListOf<LoginEvent>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.loginEvents.collect { events += it }
+            }
+
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            assertEquals(1, repository.loginCallCount)
+            assertEquals(1, sessionRepository.saveCallCount)
+            assertEquals(7L, sessionRepository.lastSavedUserId)
+            assertTrue(viewModel.loginUiState.value.isLoading)
+            assertTrue(events.isEmpty())
+
+            sessionRepository.saveGate!!.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(LoginUiState(), viewModel.loginUiState.value)
+            assertEquals(listOf(LoginEvent.NavigateToHome(userId = 7L)), events)
+        }
+
+    @Test
+    fun lvmSession02_saveSuccess_emiteNavigateToHomeUnaSolaVez() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 7L)
+            val events = mutableListOf<LoginEvent>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.loginEvents.collect { events += it }
+            }
+
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            assertEquals(1, sessionRepository.saveCallCount)
+            assertEquals(1, events.size)
+            assertEquals(LoginEvent.NavigateToHome(userId = 7L), events.single())
+
+            advanceUntilIdle()
+            assertEquals(1, events.size)
+        }
+
+    @Test
+    fun lvmSession03_saveFailure_noEmiteEvento() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.loginUser = usuario(id = 7L)
+        sessionRepository.saveException = IllegalStateException("boom")
+        val events = mutableListOf<LoginEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.loginEvents.collect { events += it }
+        }
+
+        viewModel.onLoginEmailChanged("user@example.com")
+        viewModel.onLoginPasswordChanged("password12")
+        viewModel.submitLogin()
+        advanceUntilIdle()
+
+        assertEquals(1, sessionRepository.saveCallCount)
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun lvmSession04_saveFailure_produceUnexpected() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.loginUser = usuario(id = 7L)
+        sessionRepository.saveException = IllegalStateException("boom")
+        viewModel.onLoginEmailChanged("user@example.com")
+        viewModel.onLoginPasswordChanged("password12")
+        viewModel.submitLogin()
+        advanceUntilIdle()
+
+        assertEquals(LoginGeneralError.UNEXPECTED, viewModel.loginUiState.value.generalError)
+    }
+
+    @Test
+    fun lvmSession05_saveFailure_terminaLoadingYConservaFormulario() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 7L)
+            sessionRepository.saveException = IllegalStateException("boom")
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            val state = viewModel.loginUiState.value
+            assertFalse(state.isLoading)
+            assertEquals("user@example.com", state.email)
+            assertEquals("password12", state.password)
+        }
+
+    @Test
+    fun lvmSession06_dobleSubmitDuranteSavePendiente_unaSolaSecuencia() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 7L)
+            sessionRepository.saveGate = CompletableDeferred()
+            val events = mutableListOf<LoginEvent>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.loginEvents.collect { events += it }
+            }
+
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            assertTrue(viewModel.loginUiState.value.isLoading)
+            advanceUntilIdle()
+
+            viewModel.submitLogin()
+            sessionRepository.saveGate!!.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(1, repository.loginCallCount)
+            assertEquals(1, sessionRepository.saveCallCount)
+            assertEquals(1, events.size)
+            assertEquals(LoginEvent.NavigateToHome(userId = 7L), events.single())
+        }
+
+    @Test
+    fun lvmSession07_usaIdExactoDeAuthenticatedUser() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 987654321L)
+            val events = mutableListOf<LoginEvent>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.loginEvents.collect { events += it }
+            }
+
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            assertEquals(987654321L, sessionRepository.lastSavedUserId)
+            assertEquals(LoginEvent.NavigateToHome(userId = 987654321L), events.single())
+        }
 
     @Test
     fun rvm01_estadoInicial_esRegisterUiStateVacio() {
@@ -802,5 +955,23 @@ class AuthViewModelTest {
         override suspend fun getUsuarioByCorreo(correo: String): Usuario? {
             error("Unexpected call to getUsuarioByCorreo")
         }
+    }
+
+    private class FakeSessionRepository : SessionRepository {
+        var saveCallCount = 0
+        var lastSavedUserId: Long? = null
+        var saveException: Exception? = null
+        var saveGate: CompletableDeferred<Unit>? = null
+
+        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(null)
+
+        override suspend fun saveAuthenticatedUserId(userId: Long) {
+            saveCallCount += 1
+            lastSavedUserId = userId
+            saveGate?.await()
+            saveException?.let { throw it }
+        }
+
+        override suspend fun clearAuthenticatedUserId() = Unit
     }
 }

@@ -2,6 +2,8 @@ package com.proyecto.ganapp.ui.features.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.proyecto.ganapp.domain.usecase.session.SaveSessionResult
+import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginResult
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
@@ -23,6 +25,7 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val registerUserUseCase: RegisterUserUseCase,
+    private val saveSessionUseCase: SaveSessionUseCase,
 ) : ViewModel() {
 
     private val _loginUiState = MutableStateFlow(LoginUiState())
@@ -103,12 +106,22 @@ class AuthViewModel @Inject constructor(
                     }
                 }
                 is LoginResult.Success -> {
-                    _loginUiState.value = LoginUiState()
-                    _loginEvents.send(
-                        LoginEvent.NavigateToHome(
-                            userId = result.authenticatedUser.idUsuario,
-                        )
-                    )
+                    val userId = result.authenticatedUser.idUsuario
+                    when (saveSessionUseCase(userId)) {
+                        SaveSessionResult.Success -> {
+                            _loginUiState.value = LoginUiState()
+                            _loginEvents.send(LoginEvent.NavigateToHome(userId))
+                        }
+                        SaveSessionResult.InvalidUserId,
+                        SaveSessionResult.UnexpectedError -> {
+                            _loginUiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    generalError = LoginGeneralError.UNEXPECTED,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
