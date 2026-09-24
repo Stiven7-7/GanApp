@@ -4,12 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.proyecto.ganapp.domain.usecase.usuario.LoginResult
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
+import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserResult
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,24 +24,95 @@ class AuthViewModel @Inject constructor(
     private val registerUserUseCase: RegisterUserUseCase,
 ) : ViewModel() {
 
-    private val _loginState = MutableStateFlow<AuthLoginState>(AuthLoginState.Idle)
-    val loginState: StateFlow<AuthLoginState> = _loginState.asStateFlow()
+    private val _loginUiState = MutableStateFlow(LoginUiState())
+    val loginUiState: StateFlow<LoginUiState> = _loginUiState.asStateFlow()
+
+    private val _loginEvents = Channel<LoginEvent>(Channel.BUFFERED)
+    val loginEvents: Flow<LoginEvent> = _loginEvents.receiveAsFlow()
 
     private val _registerState = MutableStateFlow<AuthRegisterState>(AuthRegisterState.Idle)
     val registerState: StateFlow<AuthRegisterState> = _registerState.asStateFlow()
 
-    fun login(email: String, password: String) {
-        if (_loginState.value is AuthLoginState.Loading) return
+    fun onLoginEmailChanged(value: String) {
+        _loginUiState.update {
+            it.copy(
+                email = value,
+                emailError = null,
+                generalError = null,
+            )
+        }
+    }
 
-        _loginState.value = AuthLoginState.Loading
+    fun onLoginPasswordChanged(value: String) {
+        _loginUiState.update {
+            it.copy(
+                password = value,
+                passwordError = null,
+                generalError = null,
+            )
+        }
+    }
+
+    fun submitLogin() {
+        if (_loginUiState.value.isLoading) return
+
+        _loginUiState.update {
+            it.copy(
+                isLoading = true,
+                emailError = null,
+                passwordError = null,
+                generalError = null,
+            )
+        }
 
         viewModelScope.launch {
-            _loginState.value = when (val result = loginUseCase(email, password)) {
-                is LoginResult.Success -> AuthLoginState.Success(result.authenticatedUser)
-                is LoginResult.ValidationError -> AuthLoginState.ValidationError(result.errors)
-                LoginResult.InvalidCredentials -> AuthLoginState.InvalidCredentials
-                LoginResult.UnexpectedError -> AuthLoginState.UnexpectedError
+            val current = _loginUiState.value
+            when (val result = loginUseCase(current.email, current.password)) {
+                is LoginResult.ValidationError -> {
+                    _loginUiState.update {
+                        it.copy(
+                            isLoading = false,
+                            emailError = result.errors.emailError(),
+                            passwordError = result.errors.passwordError(),
+                            generalError = null,
+                        )
+                    }
+                }
+                LoginResult.InvalidCredentials -> {
+                    _loginUiState.update {
+                        it.copy(
+                            isLoading = false,
+                            emailError = null,
+                            passwordError = null,
+                            generalError = LoginGeneralError.INVALID_CREDENTIALS,
+                        )
+                    }
+                }
+                LoginResult.UnexpectedError -> {
+                    _loginUiState.update {
+                        it.copy(
+                            isLoading = false,
+                            emailError = null,
+                            passwordError = null,
+                            generalError = LoginGeneralError.UNEXPECTED,
+                        )
+                    }
+                }
+                is LoginResult.Success -> {
+                    _loginUiState.value = LoginUiState()
+                    _loginEvents.send(
+                        LoginEvent.NavigateToHome(
+                            userId = result.authenticatedUser.idUsuario,
+                        )
+                    )
+                }
             }
+        }
+    }
+
+    fun onLoginScreenLeaving() {
+        _loginUiState.update { current ->
+            LoginUiState(email = current.email)
         }
     }
 
@@ -77,19 +153,6 @@ class AuthViewModel @Inject constructor(
         _registerState.value = AuthRegisterState.Idle
     }
 
-    /**
-     * Reinicia el estado de login tras navegar a Home para evitar reprocesar Success.
-     */
-    fun consumeLoginSuccess() {
-        _loginState.value = AuthLoginState.Idle
-    }
-
-    fun resetLoginState() {
-        if (_loginState.value !is AuthLoginState.Loading) {
-            _loginState.value = AuthLoginState.Idle
-        }
-    }
-
     fun resetRegisterState() {
         if (_registerState.value !is AuthRegisterState.Loading) {
             _registerState.value = AuthRegisterState.Idle
@@ -97,7 +160,26 @@ class AuthViewModel @Inject constructor(
     }
 
     fun logout() {
-        _loginState.value = AuthLoginState.Idle
+        _loginUiState.value = LoginUiState()
         _registerState.value = AuthRegisterState.Idle
+    }
+
+    private fun Set<LoginValidationError>.emailError(): LoginValidationError? {
+        return when {
+            LoginValidationError.EMPTY_EMAIL in this -> LoginValidationError.EMPTY_EMAIL
+            LoginValidationError.EMAIL_CONTAINS_WHITESPACE in this ->
+                LoginValidationError.EMAIL_CONTAINS_WHITESPACE
+            LoginValidationError.INVALID_EMAIL_FORMAT in this ->
+                LoginValidationError.INVALID_EMAIL_FORMAT
+            else -> null
+        }
+    }
+
+    private fun Set<LoginValidationError>.passwordError(): LoginValidationError? {
+        return when {
+            LoginValidationError.EMPTY_PASSWORD in this -> LoginValidationError.EMPTY_PASSWORD
+            LoginValidationError.PASSWORD_TOO_LONG in this -> LoginValidationError.PASSWORD_TOO_LONG
+            else -> null
+        }
     }
 }
