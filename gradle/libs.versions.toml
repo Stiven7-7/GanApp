@@ -45,6 +45,7 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 
 # --- Retrofit + OkHttp + Moshi (Networking) ---
 retrofit-core = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
