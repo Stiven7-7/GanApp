@@ -261,11 +261,6 @@ class AuthViewModel @Inject constructor(
         _registerUiState.value = RegisterUiState()
     }
 
-    fun logout() {
-        _loginUiState.value = LoginUiState()
-        _registerUiState.value = RegisterUiState()
-    }
-
     private fun Set<LoginValidationError>.emailError(): LoginValidationError? {
         return when {
             LoginValidationError.EMPTY_EMAIL in this -> LoginValidationError.EMPTY_EMAIL

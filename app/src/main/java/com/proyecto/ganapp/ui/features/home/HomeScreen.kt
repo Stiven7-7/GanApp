@@ -21,6 +21,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val usuario by viewModel.usuario.collectAsState()
+    val logoutUiState by viewModel.logoutUiState.collectAsState()
 
     LaunchedEffect(idUsuario) {
         viewModel.cargarUsuario(idUsuario)
@@ -98,6 +99,38 @@ fun HomeScreen(
                     .height(60.dp)
             ) {
                 Text("Notificaciones", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = viewModel::logout,
+                enabled = !logoutUiState.isLoading,
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            ) {
+                Text(
+                    text = if (logoutUiState.isLoading) {
+                        "Cerrando sesión…"
+                    } else {
+                        "Cerrar sesión"
+                    },
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            if (logoutUiState.error == HomeLogoutError.UNEXPECTED) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "No se pudo cerrar la sesión. Intenta de nuevo.",
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                )
             }
         }
     }
