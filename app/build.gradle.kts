@@ -53,6 +53,10 @@ android {
             arg("room.expandProjection", "true")
         }
     }
+
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 dependencies {

@@ -2,10 +2,19 @@ package com.proyecto.ganapp.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.proyecto.ganapp.util.DateUtils
 
-@Entity(tableName = "usuario")
+@Entity(
+    tableName = "usuario",
+    indices = [
+        Index(
+            value = ["correo"],
+            unique = true,
+        )
+    ]
+)
 data class UsuarioEntity(
     @PrimaryKey(autoGenerate = true)
     val idUsuario: Long = 0,

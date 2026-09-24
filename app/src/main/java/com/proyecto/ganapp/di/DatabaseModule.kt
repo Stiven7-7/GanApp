@@ -3,6 +3,7 @@ package com.proyecto.ganapp.di
 import android.content.Context
 import androidx.room.Room
 import com.proyecto.ganapp.data.local.db.AppDatabase
+import com.proyecto.ganapp.data.local.db.MIGRATION_6_7
 import com.proyecto.ganapp.data.local.dao.AnimalDao
 import com.proyecto.ganapp.data.local.dao.UsuarioDao
 import com.proyecto.ganapp.data.local.dao.NotificacionDao
@@ -26,7 +27,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "ganapp_db"
         )
-            .fallbackToDestructiveMigration() // elimina la BD si cambia versión y no hay migración
+            .addMigrations(MIGRATION_6_7)
             .build()
     }
 

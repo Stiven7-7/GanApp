@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.data.repository.impl
 
+import android.database.sqlite.SQLiteConstraintException
 import com.proyecto.ganapp.data.local.dao.UsuarioDao
 import com.proyecto.ganapp.data.local.entity.UsuarioEntity
 import com.proyecto.ganapp.data.mapper.toDomain
@@ -27,8 +28,16 @@ class UsuarioRepositoryImpl @Inject constructor(
             activo = true
         )
 
-        val userId = dao.insert(entity)
-        return RegisterUserRepositoryResult.Success(userId)
+        return try {
+            val userId = dao.insert(entity)
+            RegisterUserRepositoryResult.Success(userId)
+        } catch (e: SQLiteConstraintException) {
+            if (dao.getByCorreo(entity.correo) != null) {
+                RegisterUserRepositoryResult.DuplicateEmail
+            } else {
+                throw e
+            }
+        }
     }
 
     override suspend fun login(correo: String, contrasena: String): Usuario? {
