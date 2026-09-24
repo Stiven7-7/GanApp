@@ -1,9 +1,11 @@
 package com.proyecto.ganapp.di
 
 import com.proyecto.ganapp.data.repository.impl.AnimalRepositoryImpl
+import com.proyecto.ganapp.data.repository.impl.SessionRepositoryImpl
 import com.proyecto.ganapp.data.repository.impl.UsuarioRepositoryImpl
 import com.proyecto.ganapp.data.repository.impl.NotificacionRepositoryImpl
 import com.proyecto.ganapp.domain.repository.AnimalRepository
+import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import dagger.Binds
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindNotificacionRepository(
         impl: NotificacionRepositoryImpl
     ): NotificacionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionRepository(
+        impl: SessionRepositoryImpl
+    ): SessionRepository
 }

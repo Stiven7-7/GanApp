@@ -100,6 +100,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
 
+    // DataStore
+    implementation(libs.datastore.preferences)
+
     //bcrypt
     implementation(libs.bcrypt)
 

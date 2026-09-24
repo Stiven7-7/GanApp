@@ -20,6 +20,7 @@ coroutines = "1.7.3"
 timber = "5.0.1"
 navigation = "2.8.3"
 bcrypt = "0.9.0"
+datastore = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -69,6 +70,7 @@ timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 # --- Navigation Compose ---
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 bcrypt = { group = "at.favre.lib", name = "bcrypt", version.ref = "bcrypt" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
