@@ -6,6 +6,7 @@ import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalsUseCase
 import com.proyecto.ganapp.domain.usecase.animal.InsertAnimalUseCase
+import com.proyecto.ganapp.domain.usecase.session.ObserveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserUseCase
@@ -53,6 +54,18 @@ object UseCaseModule {
         repository: SessionRepository
     ): SaveSessionUseCase {
         return SaveSessionUseCase(repository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideObserveSessionUseCase(
+        sessionRepository: SessionRepository,
+        usuarioRepository: UsuarioRepository,
+    ): ObserveSessionUseCase {
+        return ObserveSessionUseCase(
+            sessionRepository = sessionRepository,
+            usuarioRepository = usuarioRepository,
+        )
     }
 
     // 🔔 Notificación UseCases
