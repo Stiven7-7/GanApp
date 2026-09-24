@@ -1,6 +1,7 @@
 package com.proyecto.ganapp.domain.usecase.usuario
 
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import java.util.Locale
 
@@ -72,11 +73,17 @@ class RegisterUserUseCase(
                 correo = normalizedCorreo,
                 contrasena = contrasena,
             )
-            val userId = repository.register(usuario)
-            if (userId > 0) {
-                RegisterUserResult.Success(userId)
-            } else {
-                RegisterUserResult.UnexpectedError
+            when (val repositoryResult = repository.register(usuario)) {
+                is RegisterUserRepositoryResult.Success -> {
+                    if (repositoryResult.userId > 0) {
+                        RegisterUserResult.Success(repositoryResult.userId)
+                    } else {
+                        RegisterUserResult.UnexpectedError
+                    }
+                }
+                RegisterUserRepositoryResult.DuplicateEmail -> {
+                    RegisterUserResult.DuplicateEmail
+                }
             }
         } catch (_: Exception) {
             RegisterUserResult.UnexpectedError

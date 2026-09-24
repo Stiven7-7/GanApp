@@ -4,6 +4,7 @@ import com.proyecto.ganapp.data.local.dao.UsuarioDao
 import com.proyecto.ganapp.data.local.entity.UsuarioEntity
 import com.proyecto.ganapp.data.mapper.toDomain
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.util.DateUtils
 import com.proyecto.ganapp.util.PasswordUtils
@@ -13,7 +14,7 @@ class UsuarioRepositoryImpl @Inject constructor(
     private val dao: UsuarioDao
 ) : UsuarioRepository {
 
-    override suspend fun register(usuario: Usuario): Long {
+    override suspend fun register(usuario: Usuario): RegisterUserRepositoryResult {
         // 🔒 Cifrar contraseña antes de guardar
         val hash = PasswordUtils.hash(usuario.contrasena)
 
@@ -26,7 +27,8 @@ class UsuarioRepositoryImpl @Inject constructor(
             activo = true
         )
 
-        return dao.insert(entity)
+        val userId = dao.insert(entity)
+        return RegisterUserRepositoryResult.Success(userId)
     }
 
     override suspend fun login(correo: String, contrasena: String): Usuario? {

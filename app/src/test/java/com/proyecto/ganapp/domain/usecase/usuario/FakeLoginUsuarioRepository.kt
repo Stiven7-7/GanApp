@@ -1,6 +1,7 @@
 package com.proyecto.ganapp.domain.usecase.usuario
 
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 
 /**
@@ -25,7 +26,7 @@ class FakeLoginUsuarioRepository : UsuarioRepository {
         return loginReturnUsuario
     }
 
-    override suspend fun register(usuario: Usuario): Long =
+    override suspend fun register(usuario: Usuario): RegisterUserRepositoryResult =
         error("Unexpected call to register")
 
     override suspend fun getUserById(id: Long): Usuario? =

@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.domain.usecase.usuario
 
+import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,7 +21,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun registroValido_retornaSuccessConIdReal() = runBlocking {
-        repository.registerReturnId = 42L
+        repository.registerResult = RegisterUserRepositoryResult.Success(42L)
 
         val result = useCase(
             nombre = "Ana",
@@ -89,7 +90,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun confirmacionValida_permiteRegistrar() = runBlocking {
-        repository.registerReturnId = 7L
+        repository.registerResult = RegisterUserRepositoryResult.Success(7L)
 
         val result = useCase(
             nombre = "Ana",
@@ -197,7 +198,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun contrasenaDe8Caracteres_esValida() = runBlocking {
-        repository.registerReturnId = 1L
+        repository.registerResult = RegisterUserRepositoryResult.Success(1L)
         val password = "12345678"
 
         val result = useCase(
@@ -213,7 +214,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun contrasenaDe64Caracteres_esValida() = runBlocking {
-        repository.registerReturnId = 1L
+        repository.registerResult = RegisterUserRepositoryResult.Success(1L)
         val password = "a".repeat(64)
 
         val result = useCase(
@@ -304,7 +305,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun idCero_produceUnexpectedError() = runBlocking {
-        repository.registerReturnId = 0L
+        repository.registerResult = RegisterUserRepositoryResult.Success(0L)
 
         val result = useCase(
             nombre = "Ana",
@@ -319,7 +320,7 @@ class RegisterUserUseCaseTest {
 
     @Test
     fun idNegativo_produceUnexpectedError() = runBlocking {
-        repository.registerReturnId = -1L
+        repository.registerResult = RegisterUserRepositoryResult.Success(-1L)
 
         val result = useCase(
             nombre = "Ana",
@@ -357,6 +358,22 @@ class RegisterUserUseCaseTest {
             confirmacionContrasena = "password1",
         )
 
+        assertEquals(1, repository.registerCallCount)
+    }
+
+    @Test
+    fun duplicateEmailDelRepositorio_produceDuplicateEmail() = runBlocking {
+        repository.registerResult = RegisterUserRepositoryResult.DuplicateEmail
+
+        val result = useCase(
+            nombre = "Ana",
+            apellido = "Pérez",
+            correo = "ana@example.com",
+            contrasena = "password1",
+            confirmacionContrasena = "password1",
+        )
+
+        assertEquals(RegisterUserResult.DuplicateEmail, result)
         assertEquals(1, repository.registerCallCount)
     }
 

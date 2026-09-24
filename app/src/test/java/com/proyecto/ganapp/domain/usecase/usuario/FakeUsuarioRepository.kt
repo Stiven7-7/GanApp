@@ -1,24 +1,26 @@
 package com.proyecto.ganapp.domain.usecase.usuario
 
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 
 /**
  * Fake manual de [UsuarioRepository] para pruebas unitarias (sin frameworks de mock).
  */
 class FakeUsuarioRepository : UsuarioRepository {
-    var registerReturnId: Long = 1L
+    var registerResult: RegisterUserRepositoryResult =
+        RegisterUserRepositoryResult.Success(1L)
     var registerException: Exception? = null
     var registerCallCount: Int = 0
         private set
     var lastRegisteredUsuario: Usuario? = null
         private set
 
-    override suspend fun register(usuario: Usuario): Long {
+    override suspend fun register(usuario: Usuario): RegisterUserRepositoryResult {
         registerCallCount++
         lastRegisteredUsuario = usuario
         registerException?.let { throw it }
-        return registerReturnId
+        return registerResult
     }
 
     override suspend fun login(correo: String, contrasena: String): Usuario? =
