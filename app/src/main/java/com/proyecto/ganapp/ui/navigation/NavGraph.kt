@@ -1,22 +1,26 @@
 package com.proyecto.ganapp.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.proyecto.ganapp.ui.features.animals.AnimalsScreen
+import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
 import com.proyecto.ganapp.ui.features.auth.LoginScreen
 import com.proyecto.ganapp.ui.features.auth.RegisterScreen
-import com.proyecto.ganapp.ui.features.notifications.NotificationsScreen
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
 import com.proyecto.ganapp.ui.features.home.HomeScreen
 import com.proyecto.ganapp.ui.features.notifications.AnimalNotificationsScreen
 import com.proyecto.ganapp.ui.features.notifications.AssignNotificationScreen
+import com.proyecto.ganapp.ui.features.notifications.NotificationsScreen
 import com.proyecto.ganapp.ui.features.notifications.RegisterNotificationScreen
 
 sealed class Screen(val route: String) {
@@ -33,41 +37,78 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Screen.Login.route) {
+fun RootNavigation(
+    viewModel: RootSessionViewModel = hiltViewModel(),
+) {
+    val sessionState by viewModel.uiState.collectAsState()
 
-        // LOGIN
+    when (val state = sessionState) {
+        RootSessionState.Loading -> RootLoadingContent()
+        RootSessionState.Unauthenticated -> AuthNavGraph()
+        is RootSessionState.Authenticated -> AppNavGraph(userId = state.userId)
+    }
+}
+
+@Composable
+private fun RootLoadingContent() {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+private fun AuthNavGraph() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Login.route,
+    ) {
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginSuccess = { idUsuario ->
-                    navController.navigate("home/$idUsuario")
+                onLoginSuccess = { _ ->
+                    // No navegación imperativa.
+                    // RootSessionState reaccionará al DataStore ya persistido.
                 },
                 onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
-                }
+                },
             )
         }
 
-        // REGISTER USUARIO
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = { navController.navigate(Screen.Login.route) },
-                onNavigateToLogin = { navController.popBackStack() }
+                onNavigateToLogin = { navController.popBackStack() },
             )
         }
+    }
+}
 
-        // HOME
-        composable("home/{idUsuario}") { backStackEntry ->
-            val idUsuario = backStackEntry.arguments?.getString("idUsuario")?.toLong() ?: 0L
+@Composable
+private fun AppNavGraph(
+    userId: Long,
+) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Home.route,
+    ) {
+        composable(Screen.Home.route) {
             HomeScreen(
-                idUsuario = idUsuario,
-                onRegistrarAnimal = { navController.navigate("register_animal/$idUsuario") },
-                onVerAnimales = { navController.navigate("animals/$idUsuario") },
-                onNotificaciones = { navController.navigate("notifications/$idUsuario") }
+                idUsuario = userId,
+                onRegistrarAnimal = { navController.navigate("register_animal/$userId") },
+                onVerAnimales = { navController.navigate("animals/$userId") },
+                onNotificaciones = { navController.navigate("notifications/$userId") },
             )
         }
 
-        // REGISTRAR ANIMAL
         composable("register_animal/{idUsuario}") { backStackEntry ->
             val idUsuario = backStackEntry.arguments?.getString("idUsuario")?.toLong() ?: 0L
 
@@ -75,38 +116,35 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
                 idUsuario = idUsuario,
                 onAnimalSaved = {
                     navController.popBackStack()
-                }
+                },
             )
         }
 
         composable("animals/{userId}") { navBackStackEntry ->
-            val userId = navBackStackEntry.arguments?.getString("userId")!!.toLong()
+            val routeUserId = navBackStackEntry.arguments?.getString("userId")!!.toLong()
 
             AnimalsScreen(
-                userId = userId,
+                userId = routeUserId,
                 onAddAnimal = {
-                    // quieres ir a registrar animal → usamos la ruta que ya existe
-                    navController.navigate("register_animal/$userId")
+                    navController.navigate("register_animal/$routeUserId")
                 },
                 onAssignNotification = { animalId ->
-                    // pasamos userId y animalId
-                    navController.navigate("assignNotification/$userId/$animalId")
+                    navController.navigate("assignNotification/$routeUserId/$animalId")
                 },
                 onViewNotifications = { animalId ->
                     navController.navigate("animalNotifications/$animalId")
-                }
+                },
             )
         }
 
-        // ASIGNAR NOTIFICACIÓN A UN ANIMAL  ← AÑADE ESTO
         composable("assignNotification/{userId}/{animalId}") { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
+            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
             val animalId = backStackEntry.arguments?.getString("animalId")?.toLong() ?: 0L
 
             AssignNotificationScreen(
-                userId = userId,
+                userId = routeUserId,
                 animalId = animalId,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -115,30 +153,27 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
 
             AnimalNotificationsScreen(
                 animalId = id,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
             )
         }
 
-
-        // LISTADO DE NOTIFICACIONES  ←❗ FALTABA ESTA
         composable("notifications/{userId}") { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
+            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
 
             NotificationsScreen(
-                userId = userId,
+                userId = routeUserId,
                 onAddNotification = {
-                    navController.navigate("register_notification/$userId")
-                }
+                    navController.navigate("register_notification/$routeUserId")
+                },
             )
         }
 
-        // REGISTRAR NOTIFICACIÓN
         composable("register_notification/{userId}") { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
+            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
 
             RegisterNotificationScreen(
-                userId = userId,
-                onBack = { navController.popBackStack() }
+                userId = routeUserId,
+                onBack = { navController.popBackStack() },
             )
         }
     }

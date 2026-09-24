@@ -8,7 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.proyecto.ganapp.ui.navigation.NavGraph
+import com.proyecto.ganapp.ui.navigation.RootNavigation
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
 
         setContent {
-            NavGraph()
+            RootNavigation()
         }
     }
 
