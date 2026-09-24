@@ -192,6 +192,14 @@ fun RegisterScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+                AuthRegisterState.DuplicateEmail -> {
+                    Text(
+                        text = "Ya existe una cuenta registrada con este correo.",
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 AuthRegisterState.UnexpectedError -> {
                     Text(
                         text = "Ocurrió un error inesperado. Intenta de nuevo.",

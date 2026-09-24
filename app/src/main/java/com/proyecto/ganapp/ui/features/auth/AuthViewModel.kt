@@ -64,9 +64,7 @@ class AuthViewModel @Inject constructor(
                 is RegisterUserResult.Success -> AuthRegisterState.Success(result.userId)
                 is RegisterUserResult.ValidationError ->
                     AuthRegisterState.ValidationError(result.errors)
-                // Adaptación temporal de compatibilidad.
-                // DuplicateEmail tendrá estado y mensaje específico en el bloque de integración de 1.3.
-                RegisterUserResult.DuplicateEmail -> AuthRegisterState.UnexpectedError
+                RegisterUserResult.DuplicateEmail -> AuthRegisterState.DuplicateEmail
                 RegisterUserResult.UnexpectedError -> AuthRegisterState.UnexpectedError
             }
         }

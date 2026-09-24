@@ -11,5 +11,6 @@ sealed interface AuthRegisterState {
     data object Loading : AuthRegisterState
     data class Success(val userId: Long) : AuthRegisterState
     data class ValidationError(val errors: Set<RegisterValidationError>) : AuthRegisterState
+    data object DuplicateEmail : AuthRegisterState
     data object UnexpectedError : AuthRegisterState
 }
