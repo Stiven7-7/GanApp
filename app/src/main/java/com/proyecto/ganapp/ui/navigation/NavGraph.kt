@@ -71,10 +71,6 @@ private fun AuthNavGraph() {
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginSuccess = { _ ->
-                    // No navegación imperativa.
-                    // RootSessionState reaccionará al DataStore ya persistido.
-                },
                 onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
                 },

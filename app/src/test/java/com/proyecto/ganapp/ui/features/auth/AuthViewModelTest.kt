@@ -169,41 +169,34 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun lvm09_loginExitoso_limpiaUiStateYEmiteNavigateToHome() = runTest(mainDispatcherRule.testDispatcher) {
+    fun lvm09_loginExitoso_limpiaUiStateDespuesDeGuardarSesion() = runTest(mainDispatcherRule.testDispatcher) {
         repository.loginUser = usuario(id = 7L)
-        val events = mutableListOf<LoginEvent>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.loginEvents.collect { events += it }
-        }
 
         viewModel.onLoginEmailChanged("user@example.com")
         viewModel.onLoginPasswordChanged("password12")
         viewModel.submitLogin()
         advanceUntilIdle()
 
+        assertEquals(1, sessionRepository.saveCallCount)
+        assertEquals(7L, sessionRepository.lastSavedUserId)
         assertEquals(LoginUiState(), viewModel.loginUiState.value)
-        assertEquals(listOf(LoginEvent.NavigateToHome(userId = 7L)), events)
     }
 
     @Test
-    fun lvm10_eventoOneShot_noSeRepiteEspontaneamente() = runTest(mainDispatcherRule.testDispatcher) {
+    fun lvm10_loginExitoso_noRepitePersistenciaEspontaneamente() = runTest(mainDispatcherRule.testDispatcher) {
         repository.loginUser = usuario(id = 7L)
-        val events = mutableListOf<LoginEvent>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.loginEvents.collect { events += it }
-        }
 
         viewModel.onLoginEmailChanged("user@example.com")
         viewModel.onLoginPasswordChanged("password12")
         viewModel.submitLogin()
         advanceUntilIdle()
-        assertEquals(1, events.size)
+
+        assertEquals(1, sessionRepository.saveCallCount)
         assertEquals(LoginUiState(), viewModel.loginUiState.value)
 
         advanceUntilIdle()
-        assertEquals(1, events.size)
-        assertNull(viewModel.loginUiState.value.generalError)
-        assertFalse(viewModel.loginUiState.value.isLoading)
+        assertEquals(1, sessionRepository.saveCallCount)
+        assertEquals(LoginUiState(), viewModel.loginUiState.value)
     }
 
     @Test
@@ -286,14 +279,10 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun lvmSession01_loginSuccess_guardaIdAntesDeEmitirEvento() =
+    fun lvmSession01_loginSuccess_guardaIdAntesDeLimpiarUiState() =
         runTest(mainDispatcherRule.testDispatcher) {
             repository.loginUser = usuario(id = 7L)
             sessionRepository.saveGate = CompletableDeferred()
-            val events = mutableListOf<LoginEvent>()
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.loginEvents.collect { events += it }
-            }
 
             viewModel.onLoginEmailChanged("user@example.com")
             viewModel.onLoginPasswordChanged("password12")
@@ -304,23 +293,19 @@ class AuthViewModelTest {
             assertEquals(1, sessionRepository.saveCallCount)
             assertEquals(7L, sessionRepository.lastSavedUserId)
             assertTrue(viewModel.loginUiState.value.isLoading)
-            assertTrue(events.isEmpty())
+            assertEquals("user@example.com", viewModel.loginUiState.value.email)
+            assertEquals("password12", viewModel.loginUiState.value.password)
 
             sessionRepository.saveGate!!.complete(Unit)
             advanceUntilIdle()
 
             assertEquals(LoginUiState(), viewModel.loginUiState.value)
-            assertEquals(listOf(LoginEvent.NavigateToHome(userId = 7L)), events)
         }
 
     @Test
-    fun lvmSession02_saveSuccess_emiteNavigateToHomeUnaSolaVez() =
+    fun lvmSession02_saveSuccess_persisteSesionUnaSolaVez() =
         runTest(mainDispatcherRule.testDispatcher) {
             repository.loginUser = usuario(id = 7L)
-            val events = mutableListOf<LoginEvent>()
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.loginEvents.collect { events += it }
-            }
 
             viewModel.onLoginEmailChanged("user@example.com")
             viewModel.onLoginPasswordChanged("password12")
@@ -328,29 +313,28 @@ class AuthViewModelTest {
             advanceUntilIdle()
 
             assertEquals(1, sessionRepository.saveCallCount)
-            assertEquals(1, events.size)
-            assertEquals(LoginEvent.NavigateToHome(userId = 7L), events.single())
+            assertEquals(7L, sessionRepository.lastSavedUserId)
+            assertEquals(LoginUiState(), viewModel.loginUiState.value)
 
             advanceUntilIdle()
-            assertEquals(1, events.size)
+            assertEquals(1, sessionRepository.saveCallCount)
         }
 
     @Test
-    fun lvmSession03_saveFailure_noEmiteEvento() = runTest(mainDispatcherRule.testDispatcher) {
+    fun lvmSession03_saveFailure_noLimpiaLoginUiState() = runTest(mainDispatcherRule.testDispatcher) {
         repository.loginUser = usuario(id = 7L)
         sessionRepository.saveException = IllegalStateException("boom")
-        val events = mutableListOf<LoginEvent>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.loginEvents.collect { events += it }
-        }
 
         viewModel.onLoginEmailChanged("user@example.com")
         viewModel.onLoginPasswordChanged("password12")
         viewModel.submitLogin()
         advanceUntilIdle()
 
+        val state = viewModel.loginUiState.value
         assertEquals(1, sessionRepository.saveCallCount)
-        assertTrue(events.isEmpty())
+        assertEquals("user@example.com", state.email)
+        assertEquals("password12", state.password)
+        assertTrue(state != LoginUiState())
     }
 
     @Test
@@ -386,10 +370,6 @@ class AuthViewModelTest {
         runTest(mainDispatcherRule.testDispatcher) {
             repository.loginUser = usuario(id = 7L)
             sessionRepository.saveGate = CompletableDeferred()
-            val events = mutableListOf<LoginEvent>()
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.loginEvents.collect { events += it }
-            }
 
             viewModel.onLoginEmailChanged("user@example.com")
             viewModel.onLoginPasswordChanged("password12")
@@ -403,18 +383,13 @@ class AuthViewModelTest {
 
             assertEquals(1, repository.loginCallCount)
             assertEquals(1, sessionRepository.saveCallCount)
-            assertEquals(1, events.size)
-            assertEquals(LoginEvent.NavigateToHome(userId = 7L), events.single())
+            assertEquals(LoginUiState(), viewModel.loginUiState.value)
         }
 
     @Test
     fun lvmSession07_usaIdExactoDeAuthenticatedUser() =
         runTest(mainDispatcherRule.testDispatcher) {
             repository.loginUser = usuario(id = 987654321L)
-            val events = mutableListOf<LoginEvent>()
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.loginEvents.collect { events += it }
-            }
 
             viewModel.onLoginEmailChanged("user@example.com")
             viewModel.onLoginPasswordChanged("password12")
@@ -422,7 +397,6 @@ class AuthViewModelTest {
             advanceUntilIdle()
 
             assertEquals(987654321L, sessionRepository.lastSavedUserId)
-            assertEquals(LoginEvent.NavigateToHome(userId = 987654321L), events.single())
         }
 
     @Test

@@ -31,9 +31,6 @@ class AuthViewModel @Inject constructor(
     private val _loginUiState = MutableStateFlow(LoginUiState())
     val loginUiState: StateFlow<LoginUiState> = _loginUiState.asStateFlow()
 
-    private val _loginEvents = Channel<LoginEvent>(Channel.BUFFERED)
-    val loginEvents: Flow<LoginEvent> = _loginEvents.receiveAsFlow()
-
     private val _registerUiState = MutableStateFlow(RegisterUiState())
     val registerUiState: StateFlow<RegisterUiState> = _registerUiState.asStateFlow()
 
@@ -110,7 +107,6 @@ class AuthViewModel @Inject constructor(
                     when (saveSessionUseCase(userId)) {
                         SaveSessionResult.Success -> {
                             _loginUiState.value = LoginUiState()
-                            _loginEvents.send(LoginEvent.NavigateToHome(userId))
                         }
                         SaveSessionResult.InvalidUserId,
                         SaveSessionResult.UnexpectedError -> {

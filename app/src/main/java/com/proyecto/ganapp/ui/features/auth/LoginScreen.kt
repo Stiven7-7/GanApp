@@ -27,20 +27,11 @@ import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (Long) -> Unit = {},
     onNavigateToRegister: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.loginUiState.collectAsState()
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(viewModel) {
-        viewModel.loginEvents.collect { event ->
-            when (event) {
-                is LoginEvent.NavigateToHome -> onLoginSuccess(event.userId)
-            }
-        }
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
