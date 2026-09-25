@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.proyecto.ganapp.ui.common.theme.GanAppTheme
 import com.proyecto.ganapp.ui.navigation.RootNavigation
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -25,7 +26,9 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
 
         setContent {
-            RootNavigation()
+            GanAppTheme {
+                RootNavigation()
+            }
         }
     }
 
