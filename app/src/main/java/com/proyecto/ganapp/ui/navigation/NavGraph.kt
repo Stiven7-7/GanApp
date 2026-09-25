@@ -79,7 +79,7 @@ private fun AuthNavGraph() {
 
         composable(Screen.Register.route) {
             RegisterScreen(
-                onRegisterSuccess = { navController.navigate(Screen.Login.route) },
+                onRegisterSuccess = { navController.popBackStack() },
                 onNavigateToLogin = { navController.popBackStack() },
             )
         }

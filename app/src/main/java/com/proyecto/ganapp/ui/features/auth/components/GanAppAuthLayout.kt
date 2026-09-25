@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.ui.features.auth.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.proyecto.ganapp.R
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 /**
@@ -40,6 +41,9 @@ import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 @Composable
 fun GanAppAuthLayout(
     title: String,
+    @DrawableRes headerImageRes: Int,
+    headerImageSize: Dp,
+    headerImageContentDescription: String?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit
@@ -72,9 +76,9 @@ fun GanAppAuthLayout(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
-                    painter = painterResource(R.drawable.logo_app),
-                    contentDescription = "GANAPP",
-                    modifier = Modifier.size(128.dp)
+                    painter = painterResource(headerImageRes),
+                    contentDescription = headerImageContentDescription,
+                    modifier = Modifier.size(headerImageSize)
                 )
 
                 Spacer(modifier = Modifier.height(GanAppSpacing.md))

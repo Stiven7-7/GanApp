@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.proyecto.ganapp.R
 import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 import com.proyecto.ganapp.ui.features.auth.components.GanAppAuthLayout
@@ -50,6 +51,9 @@ fun LoginScreen(
 
     GanAppAuthLayout(
         title = "Inicia sesión",
+        headerImageRes = R.drawable.logo_app,
+        headerImageSize = 128.dp,
+        headerImageContentDescription = "GANAPP",
         subtitle = "Gestiona tu finca desde un solo lugar."
     ) {
         OutlinedTextField(
