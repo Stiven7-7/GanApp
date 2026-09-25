@@ -2,7 +2,8 @@ package com.proyecto.ganapp.ui.features.auth.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -11,11 +12,12 @@ import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -42,16 +44,17 @@ fun GanAppAuthLayout(
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing.exclude(WindowInsets.ime))
             .imePadding()
     ) {
+        val viewportHeight = maxHeight
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -59,10 +62,13 @@ fun GanAppAuthLayout(
                 modifier = Modifier
                     .widthIn(max = 520.dp)
                     .fillMaxWidth()
+                    .heightIn(min = viewportHeight)
+                    .padding(horizontal = GanAppSpacing.lg)
                     .padding(
-                        horizontal = GanAppSpacing.lg,
-                        vertical = GanAppSpacing.xl
+                        top = GanAppSpacing.lg,
+                        bottom = GanAppSpacing.xxl
                     ),
+                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
@@ -71,7 +77,7 @@ fun GanAppAuthLayout(
                     modifier = Modifier.size(128.dp)
                 )
 
-                Spacer(modifier = Modifier.height(GanAppSpacing.lg))
+                Spacer(modifier = Modifier.height(GanAppSpacing.md))
 
                 Text(
                     text = title,
