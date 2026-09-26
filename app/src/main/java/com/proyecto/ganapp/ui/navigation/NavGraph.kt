@@ -1,5 +1,9 @@
 package com.proyecto.ganapp.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -88,6 +92,8 @@ private fun RootLoadingContent() {
     }
 }
 
+private const val AuthTransitionMillis = 220
+
 @Composable
 private fun AuthNavGraph() {
     val navController = rememberNavController()
@@ -96,7 +102,25 @@ private fun AuthNavGraph() {
         navController = navController,
         startDestination = Screen.Login.route,
     ) {
-        composable(Screen.Login.route) {
+        composable(
+            route = Screen.Login.route,
+            exitTransition = {
+                fadeOut(tween(AuthTransitionMillis)) +
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(AuthTransitionMillis),
+                        targetOffset = { it / 12 },
+                    )
+            },
+            popEnterTransition = {
+                fadeIn(tween(AuthTransitionMillis)) +
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(AuthTransitionMillis),
+                        initialOffset = { it / 12 },
+                    )
+            },
+        ) {
             LoginScreen(
                 onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
@@ -104,7 +128,25 @@ private fun AuthNavGraph() {
             )
         }
 
-        composable(Screen.Register.route) {
+        composable(
+            route = Screen.Register.route,
+            enterTransition = {
+                fadeIn(tween(AuthTransitionMillis)) +
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(AuthTransitionMillis),
+                        initialOffset = { it / 12 },
+                    )
+            },
+            popExitTransition = {
+                fadeOut(tween(AuthTransitionMillis)) +
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(AuthTransitionMillis),
+                        targetOffset = { it / 12 },
+                    )
+            },
+        ) {
             RegisterScreen(
                 onRegisterSuccess = { navController.popBackStack() },
                 onNavigateToLogin = { navController.popBackStack() },
