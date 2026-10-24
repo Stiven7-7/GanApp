@@ -21,8 +21,8 @@ class NotificacionRepositoryImpl @Inject constructor(
     }
 
     /** Insertar una notificación */
-    override suspend fun insertNotification(notificacion: Notificacion) {
-        dao.insert(notificacion.toEntity())
+    override suspend fun insertNotification(notificacion: Notificacion): Long {
+        return dao.insert(notificacion.toEntity())
     }
 
     /** Actualizar una notificación */
