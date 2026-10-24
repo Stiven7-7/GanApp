@@ -30,6 +30,7 @@ import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.proyecto.ganapp.ui.features.animals.AnimalDetailScreen
 import com.proyecto.ganapp.ui.features.animals.AnimalsScreen
 import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
 import com.proyecto.ganapp.ui.features.auth.LoginScreen
@@ -199,6 +200,18 @@ private fun AppNavGraph(
                 onViewNotifications = { animalId ->
                     navController.navigate("animalNotifications/$animalId")
                 },
+                onAnimalClick = { animalId ->
+                    navController.navigate("animal_detail/$animalId")
+                },
+            )
+        }
+
+        composable("animal_detail/{animalId}") { backStackEntry ->
+            val animalId = backStackEntry.arguments?.getString("animalId")?.toLongOrNull() ?: -1L
+
+            AnimalDetailScreen(
+                animalId = animalId,
+                onBack = { navController.popBackStack() },
             )
         }
 

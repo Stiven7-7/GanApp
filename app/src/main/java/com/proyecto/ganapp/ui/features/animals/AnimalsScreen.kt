@@ -1,11 +1,13 @@
 package com.proyecto.ganapp.ui.features.animals
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.*
@@ -17,6 +19,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +35,7 @@ fun AnimalsScreen(
     onAddAnimal: () -> Unit,
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit,
+    onAnimalClick: (Long) -> Unit,
     viewModel: AnimalsViewModel = hiltViewModel()
 ) {
     val listState by viewModel.listUiState.collectAsState()
@@ -97,6 +102,7 @@ fun AnimalsScreen(
                     items(state.animals) { animal ->
                         AnimalCard(
                             animal = animal,
+                            onAnimalClick = onAnimalClick,
                             onAssignNotification = { animalId ->
                                 onAssignNotification(animalId)
                             },
@@ -119,6 +125,7 @@ fun AnimalsScreen(
 @Composable
 fun AnimalCard(
     animal: Animal,
+    onAnimalClick: (Long) -> Unit,
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit
 ) {
@@ -140,7 +147,19 @@ fun AnimalCard(
 
         Column(modifier = Modifier.padding(16.dp)) {
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "Ver ficha de ${animal.nombre}"
+                    }
+                    .clickable(
+                        onClickLabel = "Ver ficha de ${animal.nombre}",
+                        onClick = { onAnimalClick(animal.idAnimal) },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
 
                 if (!animal.fotoUri.isNullOrEmpty()) {
                     Image(
@@ -182,6 +201,11 @@ fun AnimalCard(
                     contentDescription = "Vacunación",
                     tint = Color(0xFF4CAF50),
                     modifier = Modifier.size(28.dp)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Gray,
                 )
             }
 
