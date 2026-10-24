@@ -11,6 +11,7 @@ import com.proyecto.ganapp.domain.usecase.session.ObserveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserUseCase
+import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
 import com.proyecto.ganapp.domain.usecase.notificacion.GetNotificationsUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
 import dagger.Module
@@ -86,7 +87,9 @@ object UseCaseModule {
 
     @Provides
     @Singleton
-    fun provideScheduleNotificationUseCase(): ScheduleNotificationUseCase {
-        return ScheduleNotificationUseCase()
+    fun provideScheduleNotificationUseCase(
+        scheduler: NotificationAlarmScheduler,
+    ): ScheduleNotificationUseCase {
+        return ScheduleNotificationUseCase(scheduler)
     }
 }
