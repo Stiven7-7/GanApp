@@ -8,6 +8,6 @@ interface AnimalRepository {
     fun getAnimalsByUser(userId: Long): Flow<List<Animal>>
     suspend fun getAnimalById(id: Long): Animal?
     suspend fun insertAnimal(animal: Animal): Long
-    suspend fun updateAnimal(animal: Animal)
+    suspend fun updateAnimal(animal: Animal): Boolean
     suspend fun deleteAnimal(id: Long)
 }

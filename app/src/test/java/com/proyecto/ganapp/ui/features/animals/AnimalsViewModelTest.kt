@@ -165,7 +165,7 @@ class AnimalsViewModelTest {
             return insertGate?.await() ?: 1L
         }
 
-        override suspend fun updateAnimal(animal: Animal) {
+        override suspend fun updateAnimal(animal: Animal): Boolean {
             error("Unexpected call to updateAnimal")
         }
 

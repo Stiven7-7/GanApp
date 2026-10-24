@@ -31,6 +31,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.proyecto.ganapp.ui.features.animals.AnimalDetailScreen
+import com.proyecto.ganapp.ui.features.animals.AnimalEditScreen
 import com.proyecto.ganapp.ui.features.animals.AnimalsScreen
 import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
 import com.proyecto.ganapp.ui.features.auth.LoginScreen
@@ -212,6 +213,23 @@ private fun AppNavGraph(
             AnimalDetailScreen(
                 animalId = animalId,
                 onBack = { navController.popBackStack() },
+                onEditAnimal = { id ->
+                    navController.navigate("animal_edit/$id")
+                },
+            )
+        }
+
+        composable("animal_edit/{animalId}") { backStackEntry ->
+            val animalId = backStackEntry.arguments?.getString("animalId")?.toLongOrNull() ?: -1L
+
+            AnimalEditScreen(
+                animalId = animalId,
+                onBack = { navController.popBackStack() },
+                onUpdateSuccess = {
+                    navController.navigate("animal_detail/$animalId") {
+                        popUpTo("animal_detail/$animalId") { inclusive = true }
+                    }
+                },
             )
         }
 

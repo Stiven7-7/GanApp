@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,6 +53,7 @@ import com.proyecto.ganapp.domain.model.EspecieAnimal
 fun AnimalDetailScreen(
     animalId: Long,
     onBack: () -> Unit,
+    onEditAnimal: (Long) -> Unit,
     viewModel: AnimalDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -70,6 +72,16 @@ fun AnimalDetailScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
                         )
+                    }
+                },
+                actions = {
+                    if (uiState is AnimalDetailUiState.Success) {
+                        IconButton(onClick = { onEditAnimal(animalId) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Edit,
+                                contentDescription = "Editar animal",
+                            )
+                        }
                     }
                 },
             )

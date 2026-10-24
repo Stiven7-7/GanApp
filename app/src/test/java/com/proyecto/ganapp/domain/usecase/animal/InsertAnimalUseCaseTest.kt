@@ -321,7 +321,7 @@ class InsertAnimalUseCaseTest {
             return nextId
         }
 
-        override suspend fun updateAnimal(animal: Animal) {
+        override suspend fun updateAnimal(animal: Animal): Boolean {
             error("Unexpected call to updateAnimal")
         }
 
