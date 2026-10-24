@@ -25,8 +25,8 @@ class AnimalRepositoryImpl @Inject constructor(
         return dao.getById(id)?.toDomain()
     }
 
-    override suspend fun insertAnimal(animal: Animal) {
-        dao.insert(animal.toEntity())
+    override suspend fun insertAnimal(animal: Animal): Long {
+        return dao.insert(animal.toEntity())
     }
 
     override suspend fun updateAnimal(animal: Animal) {

@@ -19,10 +19,10 @@ import com.proyecto.ganapp.data.local.entity.UsuarioEntity
         NotificacionEntity::class,
         NotificacionxAnimalEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
-@TypeConverters(value = [DateConverters::class])
+@TypeConverters(value = [DateConverters::class, EspecieAnimalConverters::class])
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun usuarioDao(): UsuarioDao

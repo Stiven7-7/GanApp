@@ -264,7 +264,7 @@ class AppDatabaseMigration6To7Test {
 
     private fun openAppDatabase(): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(MIGRATION_6_7)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
             .build()
     }
 
