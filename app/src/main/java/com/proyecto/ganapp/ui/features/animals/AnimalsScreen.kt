@@ -22,9 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
-import androidx.navigation.NavController
 import com.proyecto.ganapp.domain.model.Animal
-import com.proyecto.ganapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +33,7 @@ fun AnimalsScreen(
     onViewNotifications: (Long) -> Unit,
     viewModel: AnimalsViewModel = hiltViewModel()
 ) {
-    val animals by viewModel.animals.collectAsState()
+    val listState by viewModel.listUiState.collectAsState()
 
     LaunchedEffect(userId) {
         viewModel.loadAnimals(userId)
@@ -54,33 +52,59 @@ fun AnimalsScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            items(animals) { animal ->
-                AnimalCard(
-                    animal = animal,
-                    onAssignNotification = { animalId ->
-                        onAssignNotification(animalId)
-                    },
-                    onViewNotifications = { animalId ->
-                        onViewNotifications(animalId)
-                    }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+        when (val state = listState) {
+            AnimalsListUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
             }
 
-            if (animals.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No tienes animales registrados 🐮", fontSize = 16.sp)
+            AnimalsListUiState.Empty -> {
+                Box(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("No tienes animales registrados", fontSize = 16.sp)
+                }
+            }
+
+            is AnimalsListUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("No fue posible cargar los animales.", fontSize = 16.sp)
+                }
+            }
+
+            is AnimalsListUiState.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(padding)
+                        .padding(16.dp)
+                ) {
+                    items(state.animals) { animal ->
+                        AnimalCard(
+                            animal = animal,
+                            onAssignNotification = { animalId ->
+                                onAssignNotification(animalId)
+                            },
+                            onViewNotifications = { animalId ->
+                                onViewNotifications(animalId)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
@@ -98,6 +122,13 @@ fun AnimalCard(
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit
 ) {
+    val metadata = buildAnimalMetadata(animal)
+    val fallbackRes = if (animal.fotoUri.isNullOrEmpty()) {
+        getAnimalImageRes(animal.especie)
+    } else {
+        null
+    }
+    val showImage = !animal.fotoUri.isNullOrEmpty() || fallbackRes != null
 
     Card(
         modifier = Modifier
@@ -111,7 +142,6 @@ fun AnimalCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
 
-                // FOTO
                 if (!animal.fotoUri.isNullOrEmpty()) {
                     Image(
                         painter = rememberAsyncImagePainter(model = animal.fotoUri),
@@ -121,9 +151,9 @@ fun AnimalCard(
                             .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
-                } else {
+                } else if (fallbackRes != null) {
                     Image(
-                        painter = painterResource(id = getAnimalImageRes(animal.nombre)),
+                        painter = painterResource(id = fallbackRes),
                         contentDescription = null,
                         modifier = Modifier
                             .size(72.dp)
@@ -132,15 +162,19 @@ fun AnimalCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                if (showImage) {
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(animal.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(
-                        "${animal.edad} años • ${animal.peso}kg • ${animal.color}",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
+                    if (metadata != null) {
+                        Text(
+                            metadata,
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
 
                 Icon(
@@ -153,10 +187,8 @@ fun AnimalCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // BOTONES
             Row(modifier = Modifier.fillMaxWidth()) {
 
-                // BOTÓN ASIGNAR
                 Button(
                     onClick = { onAssignNotification(animal.idAnimal) },
                     modifier = Modifier
@@ -169,7 +201,6 @@ fun AnimalCard(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // BOTÓN VER NOTIFICACIONES
                 Button(
                     onClick = { onViewNotifications(animal.idAnimal) },
                     modifier = Modifier
@@ -181,21 +212,5 @@ fun AnimalCard(
                 }
             }
         }
-    }
-}
-
-
-/* --------------------------------------------------------------------- */
-/* ------------------------------ IMÁGENES ------------------------------ */
-/* --------------------------------------------------------------------- */
-
-@Composable
-fun getAnimalImageRes(nombre: String): Int {
-    return when {
-        nombre.contains("vaca", true) || nombre.contains("manch", true) -> R.drawable.def_vaca
-        nombre.contains("cerdo", true) || nombre.contains("ros", true) -> R.drawable.def_cerdo
-        nombre.contains("pollo", true) -> R.drawable.def_gallina
-        nombre.contains("cabra", true) -> R.drawable.def_oveja
-        else -> R.drawable.def_oveja
     }
 }
