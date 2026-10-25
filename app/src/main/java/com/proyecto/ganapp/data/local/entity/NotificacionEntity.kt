@@ -23,7 +23,9 @@ data class NotificacionEntity(
     val nombre: String,
     val tipo: String,
     val descripcion: String? = null,
+    /** Día calendario como `LocalDate.toEpochDay()` desde el schema v9. */
     val fechaInicio: Long,
+    /** Día calendario como `LocalDate.toEpochDay()` desde el schema v9. Nulo solo en filas legacy. */
     val fechaFin: Long?,
     val seRepite: String,
     val hora: String,

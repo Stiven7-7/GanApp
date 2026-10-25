@@ -22,11 +22,10 @@ object NotificationRecurrenceEngine {
         afterMillis: Long,
         zoneId: ZoneId,
     ): Long? {
-        if (fechaInicio <= 0L || fechaFin <= 0L || fechaFin < fechaInicio) return null
         val time = parseStrictTime(hora) ?: return null
         return try {
-            val startDate = Instant.ofEpochMilli(fechaInicio).atZone(zoneId).toLocalDate()
-            val endDate = Instant.ofEpochMilli(fechaFin).atZone(zoneId).toLocalDate()
+            val startDate = LocalDate.ofEpochDay(fechaInicio)
+            val endDate = LocalDate.ofEpochDay(fechaFin)
             if (endDate.isBefore(startDate)) return null
             when (recurrence) {
                 RecurrenciaNotificacion.NO ->

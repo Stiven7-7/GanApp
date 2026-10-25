@@ -2,7 +2,13 @@ package com.proyecto.ganapp.data.local.db
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
+
+fun epochMillisToEpochDay(epochMillis: Long, zoneId: ZoneId): Long {
+    return Instant.ofEpochMilli(epochMillis).atZone(zoneId).toLocalDate().toEpochDay()
+}
 
 val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -105,5 +111,35 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         return db.query(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'",
         ).use { cursor -> cursor.moveToFirst() }
+    }
+}
+
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val zoneId = ZoneId.systemDefault()
+        val rows = mutableListOf<Triple<Long, Long, Long?>>()
+        db.query("SELECT idNotificacion, fechaInicio, fechaFin FROM notificacion").use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += Triple(
+                    cursor.getLong(0),
+                    cursor.getLong(1),
+                    if (cursor.isNull(2)) null else cursor.getLong(2),
+                )
+            }
+        }
+        for ((id, fechaInicioMillis, fechaFinMillis) in rows) {
+            val fechaInicio = epochMillisToEpochDay(fechaInicioMillis, zoneId)
+            if (fechaFinMillis == null) {
+                db.execSQL(
+                    "UPDATE notificacion SET fechaInicio = ? WHERE idNotificacion = ?",
+                    arrayOf(fechaInicio, id),
+                )
+            } else {
+                db.execSQL(
+                    "UPDATE notificacion SET fechaInicio = ?, fechaFin = ? WHERE idNotificacion = ?",
+                    arrayOf(fechaInicio, epochMillisToEpochDay(fechaFinMillis, zoneId), id),
+                )
+            }
+        }
     }
 }

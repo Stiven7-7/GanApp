@@ -10,6 +10,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -270,11 +271,55 @@ class NotificationRecurrenceEngineTest {
     }
 
     @Test
-    fun fechaInicioCero_retornaNull() {
+    fun epochDay_mantieneLaFechaLocalEnBogotaLosAngelesYMadrid() {
+        val epochDay = LocalDate.of(2026, 1, 31).toEpochDay()
+        val bogota = ZoneId.of("America/Bogota")
+        val losAngeles = ZoneId.of("America/Los_Angeles")
+        val madrid = ZoneId.of("Europe/Madrid")
+
+        val bogotaTrigger = triggerOn(epochDay, bogota)
+        val losAngelesTrigger = triggerOn(epochDay, losAngeles)
+        val madridTrigger = triggerOn(epochDay, madrid)
+
+        assertLocal("2026-01-31", "08:00", bogotaTrigger, bogota)
+        assertLocal("2026-01-31", "08:00", losAngelesTrigger, losAngeles)
+        assertLocal("2026-01-31", "08:00", madridTrigger, madrid)
+        assertNotEquals(bogotaTrigger, losAngelesTrigger)
+        assertNotEquals(bogotaTrigger, madridTrigger)
+    }
+
+    @Test
+    fun mensual_conservaElAnclaEnBogota() {
+        val epochDay = LocalDate.of(2026, 1, 31).toEpochDay()
+        val end = LocalDate.of(2026, 3, 31).toEpochDay()
+        val bogota = ZoneId.of("America/Bogota")
+        val february = NotificationRecurrenceEngine.nextOccurrence(
+            RecurrenciaNotificacion.MENSUAL,
+            epochDay,
+            end,
+            "08:00",
+            at("2026-01-31", "08:00", bogota),
+            bogota,
+        )
+        val march = NotificationRecurrenceEngine.nextOccurrence(
+            RecurrenciaNotificacion.MENSUAL,
+            epochDay,
+            end,
+            "08:00",
+            february!!,
+            bogota,
+        )
+
+        assertLocal("2026-02-28", "08:00", february, bogota)
+        assertLocal("2026-03-31", "08:00", march, bogota)
+    }
+
+    @Test
+    fun fechaInicioIrrepresentable_retornaNull() {
         assertNull(
             NotificationRecurrenceEngine.nextOccurrence(
                 RecurrenciaNotificacion.DIARIA,
-                0L,
+                Long.MIN_VALUE,
                 day("2026-06-15"),
                 "08:00",
                 1L,
@@ -284,12 +329,12 @@ class NotificationRecurrenceEngineTest {
     }
 
     @Test
-    fun fechaFinCero_retornaNull() {
+    fun fechaFinIrrepresentable_retornaNull() {
         assertNull(
             NotificationRecurrenceEngine.nextOccurrence(
                 RecurrenciaNotificacion.DIARIA,
                 day("2026-06-15"),
-                0L,
+                Long.MIN_VALUE,
                 "08:00",
                 1L,
                 zone,
@@ -336,6 +381,22 @@ class NotificationRecurrenceEngineTest {
         assertEquals(first, result)
     }
 
+    private fun triggerOn(epochDay: Long, zoneId: ZoneId): Long? {
+        val after = LocalDate.of(2026, 1, 30)
+            .atTime(12, 0)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+        return NotificationRecurrenceEngine.nextOccurrence(
+            RecurrenciaNotificacion.NO,
+            epochDay,
+            epochDay,
+            "08:00",
+            after,
+            zoneId,
+        )
+    }
+
     private fun next(
         recurrence: RecurrenciaNotificacion,
         start: String,
@@ -362,8 +423,8 @@ class NotificationRecurrenceEngineTest {
             .toEpochMilli()
     }
 
-    private fun day(date: String, zoneId: ZoneId = zone): Long {
-        return LocalDate.parse(date).atStartOfDay(zoneId).toInstant().toEpochMilli()
+    private fun day(date: String, @Suppress("UNUSED_PARAMETER") zoneId: ZoneId = zone): Long {
+        return LocalDate.parse(date).toEpochDay()
     }
 
     private fun assertLocal(

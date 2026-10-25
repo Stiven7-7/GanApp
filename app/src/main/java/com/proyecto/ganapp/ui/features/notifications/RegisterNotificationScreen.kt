@@ -2,7 +2,6 @@ package com.proyecto.ganapp.ui.features.notifications
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.widget.DatePicker
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,8 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.domain.model.Notificacion
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.LocalDate
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,18 +43,15 @@ fun RegisterNotificationScreen(
 
     // Date Picker
     fun openDatePicker(onDateSelected: (Long) -> Unit) {
-        val calendar = Calendar.getInstance()
+        val today = LocalDate.now()
         DatePickerDialog(
             context,
-            { _: DatePicker, y: Int, m: Int, d: Int ->
-                val c = Calendar.getInstance()
-                c.set(y, m, d, 0, 0, 0)
-                c.set(Calendar.MILLISECOND, 0)
-                onDateSelected(c.timeInMillis)
+            { _, year, month, dayOfMonth ->
+                onDateSelected(selectedNotificationEpochDay(year, month + 1, dayOfMonth))
             },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
+            today.year,
+            today.monthValue - 1,
+            today.dayOfMonth,
         ).show()
     }
 
@@ -73,9 +69,8 @@ fun RegisterNotificationScreen(
         ).show()
     }
 
-    fun formatDate(ts: Long): String {
-        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        return sdf.format(Date(ts))
+    fun formatDate(epochDay: Long): String {
+        return formatNotificationEpochDay(epochDay)
     }
 
     Scaffold(

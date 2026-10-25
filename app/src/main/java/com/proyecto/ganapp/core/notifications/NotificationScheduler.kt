@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.proyecto.ganapp.domain.model.Notificacion
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.Locale
 
@@ -14,15 +16,14 @@ object NotificationScheduler {
     fun schedule(context: Context, noti: Notificacion) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // 1. Día + hora base
+        val (hour, minute) = parseHora(noti.hora)
+        val triggerAtMillis = LocalDate.ofEpochDay(noti.fechaInicio)
+            .atTime(hour, minute)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
         val baseCal: Calendar = Calendar.getInstance().apply {
-            timeInMillis = noti.fechaInicio   // día de inicio
-
-            val (hour, minute) = parseHora(noti.hora)
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
+            timeInMillis = triggerAtMillis
         }
 
         val hasMultipleDoses =

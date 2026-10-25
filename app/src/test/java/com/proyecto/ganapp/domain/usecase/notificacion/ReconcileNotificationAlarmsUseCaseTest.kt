@@ -545,8 +545,8 @@ class ReconcileNotificationAlarmsUseCaseTest {
             .toEpochMilli()
     }
 
-    private fun day(date: String, zoneId: ZoneId = zone): Long {
-        return LocalDate.parse(date).atStartOfDay(zoneId).toInstant().toEpochMilli()
+    private fun day(date: String, @Suppress("UNUSED_PARAMETER") zoneId: ZoneId = zone): Long {
+        return LocalDate.parse(date).toEpochDay()
     }
 
     private fun assertLocal(

@@ -22,7 +22,7 @@ class CreateNotificacionUseCaseTest {
 
     private val zone = ZoneId.systemDefault()
     private val day = LocalDate.of(2026, 6, 15)
-    private val start = day.atStartOfDay(zone).toInstant().toEpochMilli()
+    private val start = day.toEpochDay()
     private val now = day.minusDays(1).atTime(LocalTime.NOON).atZone(zone).toInstant().toEpochMilli()
 
     private lateinit var repository: FakeNotificacionRepository

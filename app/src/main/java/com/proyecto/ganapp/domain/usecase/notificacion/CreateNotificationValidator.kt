@@ -1,7 +1,8 @@
 package com.proyecto.ganapp.domain.usecase.notificacion
 
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
-import java.time.Instant
+import java.time.DateTimeException
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -21,21 +22,21 @@ object CreateNotificationValidator {
         if (request.idUsuario <= 0L) {
             errors += CreateNotificationValidationError.INVALID_USER_ID
         }
-        val startDateValid = request.fechaInicio > 0L
-        val endDateValid = request.fechaFin > 0L
-        if (!startDateValid) {
+        val startDate = calendarDate(request.fechaInicio)
+        val endDate = calendarDate(request.fechaFin)
+        if (startDate == null) {
             errors += CreateNotificationValidationError.INVALID_START_DATE
         }
-        if (!endDateValid) {
+        if (endDate == null) {
             errors += CreateNotificationValidationError.INVALID_END_DATE
         }
-        if (startDateValid && endDateValid) {
-            if (request.fechaFin < request.fechaInicio) {
+        if (startDate != null && endDate != null) {
+            if (endDate.isBefore(startDate)) {
                 errors += CreateNotificationValidationError.END_BEFORE_START
             }
             if (
                 request.recurrencia == RecurrenciaNotificacion.NO &&
-                request.fechaFin != request.fechaInicio
+                endDate != startDate
             ) {
                 errors += CreateNotificationValidationError.NON_RECURRING_END_MUST_EQUAL_START
             }
@@ -44,7 +45,7 @@ object CreateNotificationValidator {
         val time = parseStrictTime(request.hora)
         if (time == null) {
             errors += CreateNotificationValidationError.INVALID_TIME
-        } else if (request.fechaInicio > 0L && occurrenceAt(request.fechaInicio, time) <= now) {
+        } else if (startDate != null && occurrenceAt(startDate, time) <= now) {
             errors += CreateNotificationValidationError.FIRST_OCCURRENCE_NOT_FUTURE
         }
 
@@ -52,15 +53,21 @@ object CreateNotificationValidator {
     }
 
     fun firstOccurrence(request: CreateNotificationRequest): Long? {
-        if (request.fechaInicio <= 0L) return null
+        val startDate = calendarDate(request.fechaInicio) ?: return null
         val time = parseStrictTime(request.hora) ?: return null
-        return occurrenceAt(request.fechaInicio, time)
+        return occurrenceAt(startDate, time)
     }
 
-    private fun occurrenceAt(fechaInicio: Long, time: LocalTime): Long {
-        val zone = ZoneId.systemDefault()
-        val startDay = Instant.ofEpochMilli(fechaInicio).atZone(zone).toLocalDate()
-        return startDay.atTime(time).atZone(zone).toInstant().toEpochMilli()
+    private fun occurrenceAt(startDate: LocalDate, time: LocalTime): Long {
+        return startDate.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    private fun calendarDate(epochDay: Long): LocalDate? {
+        return try {
+            LocalDate.ofEpochDay(epochDay)
+        } catch (exception: DateTimeException) {
+            null
+        }
     }
 
     private fun parseStrictTime(hora: String): LocalTime? {

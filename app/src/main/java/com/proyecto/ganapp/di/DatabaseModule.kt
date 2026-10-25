@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.proyecto.ganapp.data.local.db.AppDatabase
 import com.proyecto.ganapp.data.local.db.MIGRATION_6_7
 import com.proyecto.ganapp.data.local.db.MIGRATION_7_8
+import com.proyecto.ganapp.data.local.db.MIGRATION_8_9
 import com.proyecto.ganapp.data.local.dao.AnimalDao
 import com.proyecto.ganapp.data.local.dao.UsuarioDao
 import com.proyecto.ganapp.data.local.dao.NotificacionDao
@@ -28,7 +29,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "ganapp_db"
         )
-            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .build()
     }
 

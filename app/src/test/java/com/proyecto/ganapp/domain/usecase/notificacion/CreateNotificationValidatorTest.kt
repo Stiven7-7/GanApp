@@ -59,8 +59,8 @@ class CreateNotificationValidatorTest {
     }
 
     @Test
-    fun fechaInicio_noPositiva_esInvalida() {
-        listOf(0L, -1L).forEach { fechaInicio ->
+    fun fechaInicio_irrepresentable_esInvalida() {
+        listOf(Long.MIN_VALUE, Long.MAX_VALUE).forEach { fechaInicio ->
             val result = validate(
                 request(
                     fechaInicio = fechaInicio,
@@ -74,8 +74,8 @@ class CreateNotificationValidatorTest {
     }
 
     @Test
-    fun fechaFin_noPositiva_esInvalida() {
-        listOf(0L, -1L).forEach { fechaFin ->
+    fun fechaFin_irrepresentable_esInvalida() {
+        listOf(Long.MIN_VALUE, Long.MAX_VALUE).forEach { fechaFin ->
             val result = validate(
                 request(
                     fechaInicio = startOfDay(),
@@ -143,13 +143,13 @@ class CreateNotificationValidatorTest {
         val finInvalido = validate(
             request(
                 fechaInicio = startOfDay(),
-                fechaFin = 0L,
+                fechaFin = Long.MIN_VALUE,
                 recurrencia = RecurrenciaNotificacion.NO,
             ),
         )
         val inicioInvalido = validate(
             request(
-                fechaInicio = 0L,
+                fechaInicio = Long.MIN_VALUE,
                 fechaFin = startOfDay(),
                 recurrencia = RecurrenciaNotificacion.NO,
             ),
@@ -195,8 +195,8 @@ class CreateNotificationValidatorTest {
     }
 
     @Test
-    fun primeraOcurrencia_conFechaInicioNoPositiva_retornaNull() {
-        listOf(0L, -1L).forEach { fechaInicio ->
+    fun primeraOcurrencia_conEpochDayIrrepresentable_retornaNull() {
+        listOf(Long.MIN_VALUE, Long.MAX_VALUE).forEach { fechaInicio ->
             val candidate = request(
                 fechaInicio = fechaInicio,
                 hora = "08:30",
@@ -272,7 +272,7 @@ class CreateNotificationValidatorTest {
     }
 
     private fun startOfDay(date: LocalDate = day): Long {
-        return date.atStartOfDay(zone).toInstant().toEpochMilli()
+        return date.toEpochDay()
     }
 
     private fun localMillis(date: LocalDate, time: LocalTime): Long {
