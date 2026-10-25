@@ -19,9 +19,16 @@ fun AssignNotificationScreen(
     viewModel: AssignNotificationViewModel = hiltViewModel()
 ) {
     val notifications by viewModel.notifications.collectAsState()
+    val isAssigning by viewModel.isAssigning.collectAsState()
 
     LaunchedEffect(userId) {
         viewModel.loadNotifications(userId)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            if (event is AssignNotificationEvent.Success) onBack()
+        }
     }
 
     Scaffold(
@@ -49,10 +56,13 @@ fun AssignNotificationScreen(
                     items(notifications) { noti ->
                         NotificationAssignCard(
                             noti = noti,
+                            enabled = !isAssigning,
                             onAssign = {
-                                viewModel.assign(animalId, noti.idNotificacion) {
-                                    onBack()
-                                }
+                                viewModel.assign(
+                                    userId = userId,
+                                    animalId = animalId,
+                                    notificationId = noti.idNotificacion,
+                                )
                             }
                         )
                         Spacer(Modifier.height(8.dp))
@@ -66,6 +76,7 @@ fun AssignNotificationScreen(
 @Composable
 fun NotificationAssignCard(
     noti: Notificacion,
+    enabled: Boolean,
     onAssign: () -> Unit
 ) {
     Card(
@@ -77,7 +88,11 @@ fun NotificationAssignCard(
             Text("Tipo: ${noti.tipo}")
             Text("Repetición: ${noti.seRepite}")
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onAssign, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onAssign,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Asignar a este animal")
             }
         }
