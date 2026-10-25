@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.proyecto.ganapp.domain.model.Notificacion
 import java.time.LocalDate
 import java.util.Calendar
 
@@ -30,14 +29,9 @@ fun RegisterNotificationScreen(
     val seRepite by viewModel.seRepite.collectAsState()
     val hora by viewModel.hora.collectAsState()
 
-    LaunchedEffect(userId) {
-        viewModel.idUsuario.value = userId
-    }
-
-    // EVENTOS
     LaunchedEffect(Unit) {
-        viewModel.event.collect { evt ->
-            if (evt == "SUCCESS") onBack()
+        viewModel.event.collect { event ->
+            if (event is NotificationCreateEvent.Success) onBack()
         }
     }
 
@@ -151,24 +145,7 @@ fun RegisterNotificationScreen(
 
             // GUARDAR
             Button(
-                onClick = {
-                    if (nombre.isBlank()) return@Button
-                    if (fechaInicio == 0L || fechaFin == 0L) return@Button
-
-                    val noti = Notificacion(
-                        nombre = nombre,
-                        tipo = tipo,
-                        fechaInicio = fechaInicio,
-                        fechaFin = fechaFin,
-                        seRepite = seRepite,
-                        hora = hora,
-                        dosisPorDia = viewModel.dosisPorDia.value,
-                        intervaloHoras = viewModel.intervaloHoras.value,
-                        idUsuario = userId
-                    )
-
-                    viewModel.onSave(noti)
-                },
+                onClick = { viewModel.onSave(userId) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
             ) {
