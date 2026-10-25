@@ -60,6 +60,34 @@ class CreateAndScheduleNotificationUseCaseTest {
     }
 
     @Test
+    fun userIdInvalido_noPersisteNiPrograma() = runTest {
+        val result = useCase(validRequest(idUsuario = 0L), now)
+
+        assertEquals(
+            CreateNotificationResult.ValidationFailure(
+                setOf(CreateNotificationValidationError.INVALID_USER_ID),
+            ),
+            result,
+        )
+        assertEquals(0, repository.insertCalls)
+        assertEquals(0, alarmScheduler.scheduleCalls)
+    }
+
+    @Test
+    fun horaInvalida_noPersisteNiPrograma() = runTest {
+        val result = useCase(validRequest(hora = "25:00"), now)
+
+        assertEquals(
+            CreateNotificationResult.ValidationFailure(
+                setOf(CreateNotificationValidationError.INVALID_TIME),
+            ),
+            result,
+        )
+        assertEquals(0, repository.insertCalls)
+        assertEquals(0, alarmScheduler.scheduleCalls)
+    }
+
+    @Test
     fun persistenceFailure_noPrograma() = runTest {
         val cause = IllegalStateException("db error")
         repository.insertError = cause
@@ -231,15 +259,17 @@ class CreateAndScheduleNotificationUseCaseTest {
 
     private fun validRequest(
         nombre: String = "Vacuna",
+        hora: String = "08:30",
+        idUsuario: Long = 7L,
     ): CreateNotificationRequest {
         return CreateNotificationRequest(
             nombre = nombre,
             tipo = TipoNotificacion.VACUNACION,
             fechaInicio = start,
             fechaFin = start,
-            hora = "08:30",
+            hora = hora,
             recurrencia = RecurrenciaNotificacion.NO,
-            idUsuario = 7L,
+            idUsuario = idUsuario,
         )
     }
 }

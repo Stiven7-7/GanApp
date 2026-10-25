@@ -394,6 +394,32 @@ class ReconcileNotificationAlarmsUseCaseTest {
     }
 
     @Test
+    fun falloGlobalDeSesion_devuelveFailureSinConsultarNotificaciones() = runTest {
+        val cause = IllegalStateException("session")
+        session.error = cause
+
+        val result = useCase(now = 1L, zoneId = zone)
+
+        assertEquals(ReconcileNotificationAlarmsResult.Failure(cause), result)
+        assertEquals(0, repository.notificationsCalls)
+        assertEquals(0, scheduler.scheduleCalls)
+        assertEquals(0, scheduler.cancelCalls)
+    }
+
+    @Test
+    fun falloGlobalDeNotificaciones_devuelveFailureSinProgramar() = runTest {
+        val cause = IllegalStateException("notifications")
+        session.userId = 7L
+        repository.error = cause
+
+        val result = useCase(now = 1L, zoneId = zone)
+
+        assertEquals(ReconcileNotificationAlarmsResult.Failure(cause), result)
+        assertEquals(0, scheduler.scheduleCalls)
+        assertEquals(0, scheduler.cancelCalls)
+    }
+
+    @Test
     fun cancellationExceptionDeSesion_sePropaga() = runTest {
         val cancellation = CancellationException("session")
         session.error = cancellation
