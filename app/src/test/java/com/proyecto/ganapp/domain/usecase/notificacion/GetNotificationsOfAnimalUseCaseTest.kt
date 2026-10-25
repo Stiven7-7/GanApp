@@ -1,6 +1,5 @@
 package com.proyecto.ganapp.domain.usecase.notificacion
 
-import com.proyecto.ganapp.data.local.entity.NotificacionxAnimalEntity
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.model.Notificacion
@@ -46,7 +45,7 @@ class GetNotificationsOfAnimalUseCaseTest {
     @Test
     fun notificacionFaltante_seIgnora() = runTest {
         animals.animal = animal(ownerId = 7L)
-        links.links = listOf(NotificacionxAnimalEntity(4L, 9L))
+        links.notificationIds = listOf(9L)
         notifications.byId = emptyMap()
 
         val result = useCase(4L)
@@ -58,7 +57,7 @@ class GetNotificationsOfAnimalUseCaseTest {
     fun mismaPropiedad_seIncluye() = runTest {
         val own = notification(id = 9L, ownerId = 7L)
         animals.animal = animal(ownerId = 7L)
-        links.links = listOf(NotificacionxAnimalEntity(4L, 9L))
+        links.notificationIds = listOf(9L)
         notifications.byId = mapOf(9L to own)
 
         val result = useCase(4L)
@@ -69,7 +68,7 @@ class GetNotificationsOfAnimalUseCaseTest {
     @Test
     fun otraPropiedad_seExcluye() = runTest {
         animals.animal = animal(ownerId = 7L)
-        links.links = listOf(NotificacionxAnimalEntity(4L, 9L))
+        links.notificationIds = listOf(9L)
         notifications.byId = mapOf(9L to notification(id = 9L, ownerId = 8L))
 
         val result = useCase(4L)
@@ -81,11 +80,7 @@ class GetNotificationsOfAnimalUseCaseTest {
     fun mezcla_devuelveSoloLasDelDuenoDelAnimal() = runTest {
         val own = notification(id = 9L, ownerId = 7L)
         animals.animal = animal(ownerId = 7L)
-        links.links = listOf(
-            NotificacionxAnimalEntity(4L, 9L),
-            NotificacionxAnimalEntity(4L, 10L),
-            NotificacionxAnimalEntity(4L, 11L),
-        )
+        links.notificationIds = listOf(9L, 10L, 11L)
         notifications.byId = mapOf(
             9L to own,
             10L to notification(id = 10L, ownerId = 8L),
@@ -155,19 +150,19 @@ private class NotificationReadProbeRepository : NotificacionRepository {
 }
 
 private class LinkReadProbeRepository : NotificacionxAnimalRepository {
-    var links: List<NotificacionxAnimalEntity> = emptyList()
+    var notificationIds: List<Long> = emptyList()
     var calls: Int = 0
 
-    override suspend fun getNotificationsOfAnimal(idAnimal: Long): List<NotificacionxAnimalEntity> {
+    override suspend fun getNotificationIdsOfAnimal(idAnimal: Long): List<Long> {
         calls += 1
-        return links
+        return notificationIds
     }
 
     override suspend fun assignNotificationToAnimal(idAnimal: Long, idNotificacion: Long) = Unit
 
     override suspend fun removeAssignment(idAnimal: Long, idNotificacion: Long) = Unit
 
-    override suspend fun getAnimalsWithNotification(
-        idNotificacion: Long,
-    ): List<NotificacionxAnimalEntity> = error("Unexpected")
+    override suspend fun getAnimalIdsWithNotification(idNotificacion: Long): List<Long> {
+        error("Unexpected")
+    }
 }

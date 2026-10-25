@@ -1,6 +1,5 @@
 package com.proyecto.ganapp.domain.usecase.notificacion
 
-import com.proyecto.ganapp.domain.model.Notificacion
 import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -8,10 +7,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class CreateNotificacionUseCase @Inject constructor(
     private val repository: NotificacionRepository
 ) {
-    suspend operator fun invoke(notificacion: Notificacion) {
-        repository.insertNotification(notificacion)
-    }
-
     suspend operator fun invoke(
         request: CreateNotificationRequest,
         now: Long,

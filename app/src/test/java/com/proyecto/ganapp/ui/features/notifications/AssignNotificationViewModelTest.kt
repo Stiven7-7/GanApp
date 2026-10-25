@@ -1,6 +1,5 @@
 package com.proyecto.ganapp.ui.features.notifications
 
-import com.proyecto.ganapp.data.local.entity.NotificacionxAnimalEntity
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.model.Notificacion
@@ -246,11 +245,9 @@ private class AssignUiLinkRepository : NotificacionxAnimalRepository {
 
     override suspend fun removeAssignment(idAnimal: Long, idNotificacion: Long) = Unit
 
-    override suspend fun getNotificationsOfAnimal(idAnimal: Long): List<NotificacionxAnimalEntity> {
+    override suspend fun getNotificationIdsOfAnimal(idAnimal: Long): List<Long> = error("Unexpected")
+
+    override suspend fun getAnimalIdsWithNotification(idNotificacion: Long): List<Long> {
         error("Unexpected")
     }
-
-    override suspend fun getAnimalsWithNotification(
-        idNotificacion: Long,
-    ): List<NotificacionxAnimalEntity> = error("Unexpected")
 }

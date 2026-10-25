@@ -18,9 +18,9 @@ class NotificacionxAnimalRepositoryImpl @Inject constructor(
         dao.delete(idAnimal, idNotificacion)
     }
 
-    override suspend fun getNotificationsOfAnimal(idAnimal: Long) =
-        dao.getNotificacionesByAnimal(idAnimal)
+    override suspend fun getNotificationIdsOfAnimal(idAnimal: Long): List<Long> =
+        dao.getNotificacionesByAnimal(idAnimal).map { entity -> entity.idNotificacion }
 
-    override suspend fun getAnimalsWithNotification(idNotificacion: Long) =
-        dao.getAnimalesByNotificacion(idNotificacion)
+    override suspend fun getAnimalIdsWithNotification(idNotificacion: Long): List<Long> =
+        dao.getAnimalesByNotificacion(idNotificacion).map { entity -> entity.idAnimal }
 }

@@ -14,8 +14,8 @@ class GetNotificationsOfAnimalUseCase @Inject constructor(
 
     suspend operator fun invoke(animalId: Long): List<Notificacion> {
         val animal = animalRepository.getAnimalById(animalId) ?: return emptyList()
-        return linkRepository.getNotificationsOfAnimal(animalId).mapNotNull { link ->
-            val notification = notificationRepository.getNotificationById(link.idNotificacion)
+        return linkRepository.getNotificationIdsOfAnimal(animalId).mapNotNull { notificationId ->
+            val notification = notificationRepository.getNotificationById(notificationId)
                 ?: return@mapNotNull null
             if (notification.idUsuario == animal.idUsuario) notification else null
         }
