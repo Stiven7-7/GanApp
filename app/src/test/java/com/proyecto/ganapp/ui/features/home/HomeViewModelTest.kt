@@ -1,15 +1,25 @@
 package com.proyecto.ganapp.ui.features.home
 
+import com.proyecto.ganapp.domain.model.Notificacion
+import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
+import com.proyecto.ganapp.domain.model.NotificationCancelResult
+import com.proyecto.ganapp.domain.model.NotificationScheduleResult
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
+import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
+import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserNotificationAlarmsUseCase
+import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
 import com.proyecto.ganapp.domain.usecase.session.ClearSessionUseCase
+import com.proyecto.ganapp.domain.usecase.session.LogoutUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.GetUsuarioByIdUseCase
 import com.proyecto.ganapp.testutil.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -37,7 +47,17 @@ class HomeViewModelTest {
         sessionRepository = FakeSessionRepository()
         viewModel = HomeViewModel(
             getUsuarioByIdUseCase = GetUsuarioByIdUseCase(usuarioRepository),
-            clearSessionUseCase = ClearSessionUseCase(sessionRepository),
+            logoutUseCase = LogoutUseCase(
+                cancelAuthenticatedUserNotificationAlarmsUseCase =
+                    CancelAuthenticatedUserNotificationAlarmsUseCase(
+                        sessionRepository = sessionRepository,
+                        notificationRepository = HomeAlarmNotificacionRepository(),
+                        scheduleNotificationUseCase = ScheduleNotificationUseCase(
+                            HomeAlarmNotificationScheduler(),
+                        ),
+                    ),
+                clearSessionUseCase = ClearSessionUseCase(sessionRepository),
+            ),
         )
     }
 
@@ -87,6 +107,7 @@ class HomeViewModelTest {
 
             viewModel.logout()
 
+            assertEquals(1, sessionRepository.observeCalls)
             assertEquals(1, sessionRepository.clearCallCount)
 
             sessionRepository.clearGate!!.complete(Unit)
@@ -106,6 +127,20 @@ class HomeViewModelTest {
             advanceUntilIdle()
 
             assertEquals(1, sessionRepository.clearCallCount)
+            val state = viewModel.logoutUiState.value
+            assertFalse(state.isLoading)
+            assertEquals(HomeLogoutError.UNEXPECTED, state.error)
+        }
+
+    @Test
+    fun hvm08_falloCancelandoAlarmas_muestraUnexpectedSinLimpiarSesion() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            sessionRepository.observeError = IllegalStateException("session")
+
+            viewModel.logout()
+            advanceUntilIdle()
+
+            assertEquals(0, sessionRepository.clearCallCount)
             val state = viewModel.logoutUiState.value
             assertFalse(state.isLoading)
             assertEquals(HomeLogoutError.UNEXPECTED, state.error)
@@ -185,8 +220,17 @@ class HomeViewModelTest {
         var clearCallCount = 0
         var clearException: Exception? = null
         var clearGate: CompletableDeferred<Unit>? = null
+        var observeCalls = 0
+        var observeError: Throwable? = null
 
-        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(null)
+        override fun observeAuthenticatedUserId(): Flow<Long?> {
+            observeCalls += 1
+            val failure = observeError
+            if (failure != null) {
+                return flow { throw failure }
+            }
+            return flowOf(null)
+        }
 
         override suspend fun saveAuthenticatedUserId(userId: Long) {
             error("Unexpected call to saveAuthenticatedUserId")
@@ -197,5 +241,27 @@ class HomeViewModelTest {
             clearGate?.await()
             clearException?.let { throw it }
         }
+    }
+}
+
+private class HomeAlarmNotificacionRepository : NotificacionRepository {
+    override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> = flowOf(emptyList())
+
+    override suspend fun insertNotification(notificacion: Notificacion): Long = 0L
+
+    override suspend fun updateNotification(notificacion: Notificacion) = Unit
+
+    override suspend fun deleteNotification(id: Long) = Unit
+
+    override suspend fun getNotificationById(id: Long): Notificacion? = null
+}
+
+private class HomeAlarmNotificationScheduler : NotificationAlarmScheduler {
+    override fun scheduleNext(request: NotificationAlarmRequest): NotificationScheduleResult {
+        error("Unexpected call to scheduleNext")
+    }
+
+    override fun cancel(notificationId: Long): NotificationCancelResult {
+        return NotificationCancelResult.Cancelled(notificationId)
     }
 }

@@ -3,8 +3,8 @@ package com.proyecto.ganapp.ui.features.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.proyecto.ganapp.domain.model.Usuario
-import com.proyecto.ganapp.domain.usecase.session.ClearSessionResult
-import com.proyecto.ganapp.domain.usecase.session.ClearSessionUseCase
+import com.proyecto.ganapp.domain.usecase.session.LogoutResult
+import com.proyecto.ganapp.domain.usecase.session.LogoutUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.GetUsuarioByIdUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getUsuarioByIdUseCase: GetUsuarioByIdUseCase,
-    private val clearSessionUseCase: ClearSessionUseCase,
+    private val logoutUseCase: LogoutUseCase,
 ) : ViewModel() {
 
     private val _usuario = MutableStateFlow<Usuario?>(null)
@@ -43,14 +43,16 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            when (clearSessionUseCase()) {
-                ClearSessionResult.Success -> {
+            when (logoutUseCase()) {
+                LogoutResult.Success -> {
                     _logoutUiState.value = HomeLogoutUiState(
                         isLoading = false,
                         error = null,
                     )
                 }
-                ClearSessionResult.UnexpectedError -> {
+                LogoutResult.AlarmCancellationFailure,
+                LogoutResult.SessionClearFailure,
+                -> {
                     _logoutUiState.update {
                         it.copy(
                             isLoading = false,
