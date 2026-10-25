@@ -6,38 +6,30 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,27 +39,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.usecase.animal.UpdateAnimalValidationError
+import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
-private val editableSpecies = listOf(
-    EspecieAnimal.VACA to "Vaca",
-    EspecieAnimal.CERDO to "Cerdo",
-    EspecieAnimal.OVEJA to "Oveja",
-)
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimalEditScreen(
     animalId: Long,
@@ -88,9 +72,15 @@ fun AnimalEditScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Editar animal") },
+                title = { Text("Editar animal", textAlign = TextAlign.Center) },
+                expandedHeight = if (LocalDensity.current.fontScale >= 1.5f) {
+                    GanAppSpacing.xxl * 3
+                } else {
+                    TopAppBarDefaults.TopAppBarExpandedHeight
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -125,7 +115,7 @@ fun AnimalEditScreen(
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxSize()
-                        .padding(32.dp),
+                        .padding(GanAppSpacing.xl),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -164,7 +154,7 @@ private fun LoadError(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(GanAppSpacing.xl),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
@@ -173,15 +163,15 @@ private fun LoadError(modifier: Modifier = Modifier) {
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(GanAppSpacing.lg),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ErrorOutline,
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(GanAppSpacing.xl),
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.size(GanAppSpacing.sm))
                 Text(
                     text = "No fue posible cargar la información del animal.",
                     style = MaterialTheme.typography.bodyLarge,
@@ -192,7 +182,6 @@ private fun LoadError(modifier: Modifier = Modifier) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AnimalEditForm(
     animal: Animal,
@@ -250,35 +239,25 @@ private fun AnimalEditForm(
             .fillMaxSize()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(GanAppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
     ) {
-        EditPhoto(
-            especie = especie ?: animal.especie,
+        AnimalFormPhoto(
             fotoUri = fotoUri,
+            fallbackSpecies = especie ?: animal.especie,
             enabled = !saving,
-            onChangePhoto = { launcher.launch("image/*") },
+            pickLabel = "Cambiar foto",
+            showRemove = fotoUri != null,
+            onPickPhoto = { launcher.launch("image/*") },
             onRemovePhoto = { fotoUri = null },
+            emptyFallbackText = "Sin especificar",
         )
-        Text(
-            text = "Especie",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+        AnimalFormSectionTitle(text = "Especie")
+        AnimalSpeciesSelector(
+            selected = especie,
+            enabled = !saving,
+            onSelected = { if (!saving) especie = it },
         )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            editableSpecies.forEach { (option, label) ->
-                FilterChip(
-                    selected = especie == option,
-                    onClick = { if (!saving) especie = option },
-                    enabled = !saving,
-                    label = { Text(label) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                )
-            }
-        }
         if (originalEspecie == EspecieAnimal.SIN_ESPECIFICAR && especie == null) {
             Text(
                 text = "Selecciona una especie para continuar.",
@@ -293,49 +272,44 @@ private fun AnimalEditForm(
                 color = MaterialTheme.colorScheme.error,
             )
         }
-        OutlinedTextField(
+        AnimalFormSectionTitle(text = "Información")
+        AnimalFormTextField(
             value = nombre,
             onValueChange = { nombre = it },
-            label = { Text("Nombre") },
+            label = "Nombre",
             enabled = !saving,
-            isError = nameError != null,
-            supportingText = nameError?.let { message -> { Text(message) } },
-            modifier = Modifier.fillMaxWidth(),
+            error = nameError,
         )
-        OutlinedTextField(
+        AnimalFormTextField(
             value = edad,
             onValueChange = {
                 edad = it
                 localEdadError = null
             },
-            label = { Text("Edad") },
-            suffix = { Text("años") },
+            label = "Edad",
+            suffix = "años",
             enabled = !saving,
-            isError = ageError != null,
-            supportingText = ageError?.let { message -> { Text(message) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
+            error = ageError,
+            keyboardType = KeyboardType.Number,
         )
-        OutlinedTextField(
+        AnimalFormTextField(
             value = peso,
             onValueChange = {
                 peso = it
                 localPesoError = null
             },
-            label = { Text("Peso") },
-            suffix = { Text("kg") },
+            label = "Peso",
+            suffix = "kg",
             enabled = !saving,
-            isError = weightError != null,
-            supportingText = weightError?.let { message -> { Text(message) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
+            error = weightError,
+            keyboardType = KeyboardType.Decimal,
         )
-        OutlinedTextField(
+        AnimalFormTextField(
             value = color,
             onValueChange = { color = it },
-            label = { Text("Color") },
+            label = "Color",
             enabled = !saving,
-            modifier = Modifier.fillMaxWidth(),
+            error = null,
         )
         if (saveMessage != null) {
             Text(
@@ -359,87 +333,25 @@ private fun AnimalEditForm(
             enabled = !saving,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 56.dp),
+                .heightIn(min = AnimalFormPrimaryButtonMinHeight),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
         ) {
             if (saving) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
                 )
-                Spacer(modifier = Modifier.size(8.dp))
+                Spacer(modifier = Modifier.size(GanAppSpacing.xs))
                 Text("Guardando…")
             } else {
-                Text("Guardar cambios")
-            }
-        }
-    }
-}
-
-@Composable
-private fun EditPhoto(
-    especie: EspecieAnimal,
-    fotoUri: String?,
-    enabled: Boolean,
-    onChangePhoto: () -> Unit,
-    onRemovePhoto: () -> Unit,
-) {
-    var photoFailed by remember(fotoUri) { mutableStateOf(false) }
-    val modifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(4f / 3f)
-        .clip(MaterialTheme.shapes.large)
-    if (!fotoUri.isNullOrBlank() && !photoFailed) {
-        AsyncImage(
-            model = fotoUri,
-            contentDescription = null,
-            modifier = modifier,
-            contentScale = ContentScale.Crop,
-            onError = { photoFailed = true },
-        )
-    } else {
-        val imageRes = getAnimalImageRes(especie)
-        Surface(
-            modifier = modifier,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                if (imageRes != null) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Text(
-                        text = "Sin especificar",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-            }
-        }
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        OutlinedButton(
-            onClick = onChangePhoto,
-            enabled = enabled,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 48.dp),
-        ) {
-            Text("Cambiar foto")
-        }
-        if (fotoUri != null) {
-            TextButton(
-                onClick = onRemovePhoto,
-                enabled = enabled,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text("Quitar foto")
+                Text(
+                    text = "Guardar cambios",
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

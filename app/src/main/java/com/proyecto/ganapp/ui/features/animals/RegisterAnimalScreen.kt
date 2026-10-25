@@ -1,25 +1,49 @@
 package com.proyecto.ganapp.ui.features.animals
 
 import android.net.Uri
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.rememberAsyncImagePainter
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.usecase.animal.RegisterAnimalValidationError
+import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +58,8 @@ fun RegisterAnimalScreen(
     var peso by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
     var fotoUri by remember { mutableStateOf<String?>(null) }
-    var localFeedback by remember { mutableStateOf<String?>(null) }
+    var localEdadError by remember { mutableStateOf<String?>(null) }
+    var localPesoError by remember { mutableStateOf<String?>(null) }
 
     val registrationState by viewModel.registrationUiState.collectAsState()
     val isLoading = registrationState is AnimalRegistrationUiState.Loading
@@ -47,145 +72,155 @@ fun RegisterAnimalScreen(
         }
     }
 
-    // Launcher para seleccionar imagen (galería)
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         fotoUri = uri?.toString()
     }
 
-    val feedback = localFeedback ?: registrationFeedback(registrationState)
+    val validationErrors = (registrationState as? AnimalRegistrationUiState.ValidationError)
+        ?.errors
+        .orEmpty()
+    val speciesError = validationErrors
+        .filter {
+            it == RegisterAnimalValidationError.SPECIES_REQUIRED ||
+                it == RegisterAnimalValidationError.SPECIES_NOT_ALLOWED
+        }
+        .sortedBy { it.ordinal }
+        .joinToString(separator = "\n") { error -> validationMessage(error) }
+        .ifBlank { null }
+    val nameError = validationErrors
+        .firstOrNull { it == RegisterAnimalValidationError.NAME_REQUIRED }
+        ?.let { validationMessage(it) }
+    val ageError = localEdadError ?: validationErrors
+        .firstOrNull { it == RegisterAnimalValidationError.INVALID_AGE }
+        ?.let { validationMessage(it) }
+    val weightError = localPesoError ?: validationErrors
+        .firstOrNull { it == RegisterAnimalValidationError.INVALID_WEIGHT }
+        ?.let { validationMessage(it) }
+    val formError = when (val state = registrationState) {
+        is AnimalRegistrationUiState.Failure ->
+            "No fue posible registrar el animal. Intenta nuevamente."
+        is AnimalRegistrationUiState.ValidationError ->
+            state.errors
+                .filter { it == RegisterAnimalValidationError.INVALID_USER }
+                .sortedBy { it.ordinal }
+                .joinToString(separator = "\n") { error -> validationMessage(error) }
+                .ifBlank { null }
+        AnimalRegistrationUiState.Idle,
+        AnimalRegistrationUiState.Loading,
+        is AnimalRegistrationUiState.Success,
+        -> null
+    }
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
-        topBar = { CenterAlignedTopAppBar(title = { Text("Registrar Animal") }) }
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Registrar Animal", textAlign = TextAlign.Center) },
+                expandedHeight = if (LocalDensity.current.fontScale >= 1.5f) {
+                    GanAppSpacing.xxl * 3
+                } else {
+                    TopAppBarDefaults.TopAppBarExpandedHeight
+                },
+                navigationIcon = {
+                    IconButton(onClick = { backDispatcher?.onBackPressed() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                        )
+                    }
+                },
+            )
+        },
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(20.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.Top
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(GanAppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
         ) {
-            EspecieSelector(
+            AnimalFormPhoto(
+                fotoUri = fotoUri,
+                fallbackSpecies = especie,
+                enabled = inputsEnabled,
+                pickLabel = if (fotoUri == null) "Seleccionar foto" else "Cambiar foto",
+                showRemove = fotoUri != null,
+                onPickPhoto = { launcher.launch("image/*") },
+                onRemovePhoto = { fotoUri = null },
+            )
+            AnimalFormSectionTitle(text = "Especie")
+            AnimalSpeciesSelector(
                 selected = especie,
                 enabled = inputsEnabled,
                 onSelected = { especie = it },
             )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = nombre,
-                onValueChange = { nombre = it },
-                label = { Text("Nombre del animal") },
-                placeholder = { Text("Ej: Manchita") },
-                enabled = inputsEnabled,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = edad,
-                onValueChange = { edad = it },
-                label = { Text("Edad (años)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                enabled = inputsEnabled,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = peso,
-                onValueChange = { peso = it },
-                label = { Text("Peso (kg)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                enabled = inputsEnabled,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = color,
-                onValueChange = { color = it },
-                label = { Text("Color") },
-                enabled = inputsEnabled,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            // Preview de la imagen seleccionada
-            if (fotoUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = fotoUri),
-                    contentDescription = "Preview foto",
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(Modifier.height(8.dp))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = { launcher.launch("image/*") },
-                    enabled = inputsEnabled,
-                ) {
-                    Text("Seleccionar foto")
-                }
-
-                TextButton(
-                    onClick = { fotoUri = null },
-                    enabled = inputsEnabled,
-                ) {
-                    Text("Quitar foto")
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            if (feedback != null) {
+            if (speciesError != null) {
                 Text(
-                    text = feedback,
+                    text = speciesError,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
-                Spacer(Modifier.height(12.dp))
             }
-
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
+            AnimalFormSectionTitle(text = "Información")
+            AnimalFormTextField(
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = "Nombre del animal",
+                placeholder = "Ej: Manchita",
+                enabled = inputsEnabled,
+                error = nameError,
+            )
+            AnimalFormTextField(
+                value = edad,
+                onValueChange = {
+                    edad = it
+                    localEdadError = null
+                },
+                label = "Edad (años)",
+                enabled = inputsEnabled,
+                error = ageError,
+                keyboardType = KeyboardType.Number,
+            )
+            AnimalFormTextField(
+                value = peso,
+                onValueChange = {
+                    peso = it
+                    localPesoError = null
+                },
+                label = "Peso (kg)",
+                enabled = inputsEnabled,
+                error = weightError,
+                keyboardType = KeyboardType.Number,
+            )
+            AnimalFormTextField(
+                value = color,
+                onValueChange = { color = it },
+                label = "Color",
+                enabled = inputsEnabled,
+                error = null,
+            )
+            if (formError != null) {
+                Text(
+                    text = formError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
                 )
-                Spacer(Modifier.height(12.dp))
             }
-
             Button(
                 onClick = {
                     if (!inputsEnabled) return@Button
                     val parsedEdad = parseOptionalInt(edad)
                     val parsedPeso = parseOptionalFloat(peso)
-                    val inputErrors = buildList {
-                        if (edad.isNotBlank() && parsedEdad == null) {
-                            add("La edad no es válida.")
-                        }
-                        if (peso.isNotBlank() && parsedPeso == null) {
-                            add("El peso no es válido.")
-                        }
-                    }
-                    if (inputErrors.isNotEmpty()) {
-                        localFeedback = inputErrors.joinToString(separator = "\n")
-                        return@Button
-                    }
-                    localFeedback = null
+                    val edadInvalida = edad.isNotBlank() && parsedEdad == null
+                    val pesoInvalido = peso.isNotBlank() && parsedPeso == null
+                    localEdadError = if (edadInvalida) "La edad no es válida." else null
+                    localPesoError = if (pesoInvalido) "El peso no es válido." else null
+                    if (edadInvalida || pesoInvalido) return@Button
                     viewModel.registerAnimal(
                         especie = especie,
                         nombre = nombre,
@@ -197,47 +232,30 @@ fun RegisterAnimalScreen(
                     )
                 },
                 enabled = inputsEnabled,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = AnimalFormPrimaryButtonMinHeight),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
             ) {
-                Text("Guardar en dispositivo")
-            }
-        }
-    }
-}
-
-@Composable
-private fun EspecieSelector(
-    selected: EspecieAnimal?,
-    enabled: Boolean,
-    onSelected: (EspecieAnimal) -> Unit,
-) {
-    Text("Especie")
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        selectableSpecies.forEach { (especie, label) ->
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(
-                    selected = selected == especie,
-                    onClick = { onSelected(especie) },
-                    enabled = enabled,
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(modifier = Modifier.size(GanAppSpacing.xs))
+                }
+                Text(
+                    text = "Guardar en dispositivo",
+                    textAlign = TextAlign.Center,
                 )
-                Text(label)
             }
         }
     }
 }
-
-private val selectableSpecies = listOf(
-    EspecieAnimal.VACA to "Vaca",
-    EspecieAnimal.CERDO to "Cerdo",
-    EspecieAnimal.OVEJA to "Oveja",
-)
 
 private fun parseOptionalInt(raw: String): Int? {
     val text = raw.trim()
@@ -249,21 +267,6 @@ private fun parseOptionalFloat(raw: String): Float? {
     val text = raw.trim()
     if (text.isEmpty()) return null
     return text.toFloatOrNull()
-}
-
-private fun registrationFeedback(state: AnimalRegistrationUiState): String? {
-    return when (state) {
-        is AnimalRegistrationUiState.ValidationError ->
-            state.errors
-                .sortedBy { it.ordinal }
-                .joinToString(separator = "\n") { error -> validationMessage(error) }
-        is AnimalRegistrationUiState.Failure ->
-            "No fue posible registrar el animal. Intenta nuevamente."
-        AnimalRegistrationUiState.Idle,
-        AnimalRegistrationUiState.Loading,
-        is AnimalRegistrationUiState.Success,
-        -> null
-    }
 }
 
 private fun validationMessage(error: RegisterAnimalValidationError): String {
