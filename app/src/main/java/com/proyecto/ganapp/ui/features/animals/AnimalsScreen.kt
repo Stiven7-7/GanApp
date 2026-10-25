@@ -2,31 +2,62 @@ package com.proyecto.ganapp.ui.features.animals
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Vaccines
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
+import com.proyecto.ganapp.R
 import com.proyecto.ganapp.domain.model.Animal
+import com.proyecto.ganapp.domain.model.EspecieAnimal
+import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,15 +76,20 @@ fun AnimalsScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(title = { Text("Mis Animales") })
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddAnimal,
-                containerColor = Color(0xFF00E676)
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar animal", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Agregar animal",
+                )
             }
         }
     ) { padding ->
@@ -65,62 +101,69 @@ fun AnimalsScreen(
                         .fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
 
             AnimalsListUiState.Empty -> {
-                Box(
+                AnimalsEmptyState(
+                    onAddAnimal = onAddAnimal,
                     modifier = Modifier
                         .padding(padding)
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("No tienes animales registrados", fontSize = 16.sp)
-                }
+                        .fillMaxSize(),
+                )
             }
 
             is AnimalsListUiState.Error -> {
-                Box(
+                AnimalsErrorState(
                     modifier = Modifier
                         .padding(padding)
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("No fue posible cargar los animales.", fontSize = 16.sp)
-                }
+                        .fillMaxSize(),
+                )
             }
 
             is AnimalsListUiState.Success -> {
-                LazyColumn(
+                val fabClearance = GanAppSpacing.xxl + GanAppSpacing.lg
+                BoxWithConstraints(
                     modifier = Modifier
                         .padding(padding)
-                        .padding(16.dp)
+                        .fillMaxSize(),
                 ) {
-                    items(state.animals) { animal ->
-                        AnimalCard(
-                            animal = animal,
-                            onAnimalClick = onAnimalClick,
-                            onAssignNotification = { animalId ->
-                                onAssignNotification(animalId)
+                    val reserveFabColumn = maxWidth < 360.dp &&
+                        LocalDensity.current.fontScale < 1.5f
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = GanAppSpacing.md,
+                            top = GanAppSpacing.md,
+                            end = if (reserveFabColumn) {
+                                GanAppSpacing.xxl + GanAppSpacing.md
+                            } else {
+                                GanAppSpacing.md
                             },
-                            onViewNotifications = { animalId ->
-                                onViewNotifications(animalId)
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                            bottom = if (reserveFabColumn) GanAppSpacing.md else fabClearance,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+                    ) {
+                        items(
+                            items = state.animals,
+                            key = { animal -> animal.idAnimal },
+                        ) { animal ->
+                            AnimalCard(
+                                animal = animal,
+                                onAnimalClick = onAnimalClick,
+                                onAssignNotification = onAssignNotification,
+                                onViewNotifications = onViewNotifications,
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-/* --------------------------------------------------------------------- */
-/* ------------------------- TARJETA DE ANIMAL -------------------------- */
-/* --------------------------------------------------------------------- */
 
 @Composable
 fun AnimalCard(
@@ -129,111 +172,318 @@ fun AnimalCard(
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit
 ) {
-    val metadata = buildAnimalMetadata(animal)
-    val fallbackRes = if (animal.fotoUri.isNullOrEmpty()) {
-        getAnimalImageRes(animal.especie)
-    } else {
-        null
-    }
-    val showImage = !animal.fotoUri.isNullOrEmpty() || fallbackRes != null
+    val metadata = buildAnimalCardMetadata(animal)
 
     Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        BoxWithConstraints {
+            val stackActions = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.5f
+            Column(modifier = Modifier.padding(GanAppSpacing.md)) {
+                if (stackActions) {
+                    AnimalCardIdentityCompact(
+                        animal = animal,
+                        metadata = metadata,
+                        onAnimalClick = onAnimalClick,
+                    )
+                } else {
+                    AnimalCardIdentity(
+                        animal = animal,
+                        metadata = metadata,
+                        onAnimalClick = onAnimalClick,
+                    )
+                }
+                Spacer(modifier = Modifier.height(GanAppSpacing.md))
+                if (stackActions) {
+                    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+                        FilledTonalButton(
+                            onClick = { onAssignNotification(animal.idAnimal) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = GanAppSpacing.xxl),
+                            contentPadding = PaddingValues(
+                                horizontal = GanAppSpacing.md,
+                                vertical = GanAppSpacing.xs,
+                            ),
+                        ) {
+                            Text("Asignar")
+                        }
+                        OutlinedButton(
+                            onClick = { onViewNotifications(animal.idAnimal) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = GanAppSpacing.xxl),
+                            contentPadding = PaddingValues(
+                                horizontal = GanAppSpacing.md,
+                                vertical = GanAppSpacing.xs,
+                            ),
+                        ) {
+                            Text(
+                                text = "Ver Notificaciones",
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+                        FilledTonalButton(
+                            onClick = { onAssignNotification(animal.idAnimal) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = GanAppSpacing.xxl),
+                        ) {
+                            Text("Asignar")
+                        }
+                        OutlinedButton(
+                            onClick = { onViewNotifications(animal.idAnimal) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = GanAppSpacing.xxl),
+                        ) {
+                            Text("Ver Notificaciones")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimalCardIdentity(
+    animal: Animal,
+    metadata: AnimalCardMetadata?,
+    onAnimalClick: (Long) -> Unit,
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FFF9))
+            .heightIn(min = GanAppSpacing.xxl)
+            .semantics(mergeDescendants = true) {}
+            .clickable(
+                onClickLabel = "Ver ficha de ${animal.nombre}",
+                onClick = { onAnimalClick(animal.idAnimal) },
+            ),
+        horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        verticalAlignment = Alignment.Top,
     ) {
+        AnimalListPhoto(animal = animal)
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
+        ) {
+            AnimalCardName(animal.nombre)
+            AnimalSpeciesChip(especie = animal.especie)
+            AnimalCardMetadataLines(metadata)
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
-        Column(modifier = Modifier.padding(16.dp)) {
+@Composable
+private fun AnimalCardIdentityCompact(
+    animal: Animal,
+    metadata: AnimalCardMetadata?,
+    onAnimalClick: (Long) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = GanAppSpacing.xxl)
+            .semantics(mergeDescendants = true) {}
+            .clickable(
+                onClickLabel = "Ver ficha de ${animal.nombre}",
+                onClick = { onAnimalClick(animal.idAnimal) },
+            ),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AnimalListPhoto(animal = animal)
+            AnimalCardName(
+                nombre = animal.nombre,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AnimalSpeciesChip(especie = animal.especie)
+        AnimalCardMetadataLines(metadata)
+    }
+}
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .semantics(mergeDescendants = true) {
-                        contentDescription = "Ver ficha de ${animal.nombre}"
-                    }
-                    .clickable(
-                        onClickLabel = "Ver ficha de ${animal.nombre}",
-                        onClick = { onAnimalClick(animal.idAnimal) },
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+@Composable
+private fun AnimalCardName(
+    nombre: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = nombre,
+        modifier = modifier,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
 
-                if (!animal.fotoUri.isNullOrEmpty()) {
-                    Image(
-                        painter = rememberAsyncImagePainter(model = animal.fotoUri),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                } else if (fallbackRes != null) {
-                    Image(
-                        painter = painterResource(id = fallbackRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+@Composable
+private fun AnimalCardMetadataLines(metadata: AnimalCardMetadata?) {
+    if (metadata?.lineOne != null) {
+        Text(
+            text = metadata.lineOne,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    if (metadata?.lineTwo != null) {
+        Text(
+            text = metadata.lineTwo,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
 
-                if (showImage) {
-                    Spacer(modifier = Modifier.width(16.dp))
-                }
+@Composable
+private fun AnimalListPhoto(animal: Animal) {
+    val uri = animal.fotoUri
+    var photoFailed by remember(uri) { mutableStateOf(false) }
+    val modifier = Modifier
+        .size(80.dp)
+        .clip(MaterialTheme.shapes.medium)
+    if (!uri.isNullOrBlank() && !photoFailed) {
+        AsyncImage(
+            model = uri,
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
+            onError = { photoFailed = true },
+        )
+    } else {
+        AnimalListPhotoFallback(
+            especie = animal.especie,
+            modifier = modifier,
+        )
+    }
+}
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(animal.nombre, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    if (metadata != null) {
-                        Text(
-                            metadata,
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                Icon(
-                    imageVector = Icons.Default.Vaccines,
-                    contentDescription = "Vacunación",
-                    tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(28.dp)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+@Composable
+private fun AnimalListPhotoFallback(
+    especie: EspecieAnimal,
+    modifier: Modifier = Modifier,
+) {
+    val imageRes = getAnimalImageRes(especie)
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (imageRes != null) {
+                Image(
+                    painter = painterResource(id = imageRes),
                     contentDescription = null,
-                    tint = Color.Gray,
+                    modifier = Modifier.size(56.dp),
+                    contentScale = ContentScale.Fit,
                 )
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun AnimalsEmptyState(
+    onAddAnimal: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(GanAppSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            modifier = Modifier.size(160.dp),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(id = R.drawable.def_vaca),
+                    contentDescription = null,
+                    modifier = Modifier.size(96.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(GanAppSpacing.lg))
+        Text(
+            text = "No tienes animales registrados",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(GanAppSpacing.xs))
+        Text(
+            text = "Registra tu primer animal para comenzar.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(GanAppSpacing.lg))
+        Button(
+            onClick = onAddAnimal,
+            modifier = Modifier.heightIn(min = GanAppSpacing.xxl),
+        ) {
+            Text("Registrar animal")
+        }
+    }
+}
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-
-                Button(
-                    onClick = { onAssignNotification(animal.idAnimal) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
-                ) {
-                    Text("Asignar", color = Color.White)
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Button(
-                    onClick = { onViewNotifications(animal.idAnimal) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
-                ) {
-                    Text("Ver Notificaciones", color = Color.White)
-                }
+@Composable
+private fun AnimalsErrorState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.padding(GanAppSpacing.xl),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ) {
+            Column(
+                modifier = Modifier.padding(GanAppSpacing.md),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ErrorOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                )
+                Spacer(modifier = Modifier.height(GanAppSpacing.sm))
+                Text(
+                    text = "No fue posible cargar los animales.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

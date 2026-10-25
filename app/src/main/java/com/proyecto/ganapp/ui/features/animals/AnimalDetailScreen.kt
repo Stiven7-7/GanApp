@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
+import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +65,7 @@ fun AnimalDetailScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Ficha del animal") },
@@ -99,6 +102,7 @@ fun AnimalDetailScreen(
                         modifier = Modifier.semantics {
                             contentDescription = "Cargando la ficha del animal"
                         },
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -108,17 +112,24 @@ fun AnimalDetailScreen(
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxSize()
-                        .padding(32.dp),
+                        .padding(GanAppSpacing.xl),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(GanAppSpacing.sm))
                         Text(
                             text = "Animal no encontrado",
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(GanAppSpacing.xs))
                         Text(
                             text = "No fue posible encontrar el animal solicitado.",
                             style = MaterialTheme.typography.bodyLarge,
@@ -134,7 +145,7 @@ fun AnimalDetailScreen(
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxSize()
-                        .padding(32.dp),
+                        .padding(GanAppSpacing.xl),
                     contentAlignment = Alignment.Center,
                 ) {
                     Surface(
@@ -143,7 +154,7 @@ fun AnimalDetailScreen(
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     ) {
                         Column(
-                            modifier = Modifier.padding(20.dp),
+                            modifier = Modifier.padding(GanAppSpacing.md),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Icon(
@@ -151,7 +162,7 @@ fun AnimalDetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(GanAppSpacing.sm))
                             Text(
                                 text = "No fue posible cargar la información del animal.",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -183,19 +194,19 @@ private fun AnimalDetailContent(
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(GanAppSpacing.md),
     ) {
         AnimalDetailPhoto(animal)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(GanAppSpacing.md))
         Text(
             text = animal.nombre,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        SpeciesLabel(text = animalSpeciesLabel(animal.especie))
+        Spacer(modifier = Modifier.height(GanAppSpacing.sm))
+        AnimalSpeciesChip(especie = animal.especie)
         if (shouldShowBreed(animal.raza)) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(GanAppSpacing.sm))
             Text(
                 text = animalBreedLabel(animal.raza),
                 style = MaterialTheme.typography.bodyLarge,
@@ -203,51 +214,44 @@ private fun AnimalDetailContent(
             )
         }
         if (rows.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(GanAppSpacing.lg))
             Text(
                 text = "Información",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            rows.forEach { row ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.Top,
+            Spacer(modifier = Modifier.height(GanAppSpacing.xs))
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(
+                    modifier = Modifier.padding(GanAppSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
                 ) {
-                    Text(
-                        text = row.label,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = row.value,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.End,
-                    )
+                    rows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Text(
+                                text = row.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = row.value,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.End,
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SpeciesLabel(text: String) {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-        )
     }
 }
 

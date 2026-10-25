@@ -10,51 +10,108 @@ import org.junit.Test
 class AnimalListPresentationTest {
 
     @Test
-    fun metadata_todoNulo_retornaNull() {
-        assertNull(buildAnimalMetadata(animal()))
+    fun metadata_sinDatos_retornaNull() {
+        assertNull(buildAnimalCardMetadata(animal()))
+    }
+
+    @Test
+    fun metadata_soloRaza() {
+        assertEquals(
+            AnimalCardMetadata(lineOne = "Holstein", lineTwo = null),
+            buildAnimalCardMetadata(animal(raza = "Holstein")),
+        )
+    }
+
+    @Test
+    fun metadata_razaSentinelSeOmite() {
+        assertNull(buildAnimalCardMetadata(animal(raza = "SIN_ESPECIFICAR")))
     }
 
     @Test
     fun metadata_soloEdad() {
-        assertEquals("2 años", buildAnimalMetadata(animal(edad = 2)))
+        assertEquals(
+            AnimalCardMetadata(lineOne = "2 años", lineTwo = null),
+            buildAnimalCardMetadata(animal(edad = 2)),
+        )
+    }
+
+    @Test
+    fun metadata_edadUnoUsaSingular() {
+        assertEquals(
+            AnimalCardMetadata(lineOne = "1 año", lineTwo = null),
+            buildAnimalCardMetadata(animal(edad = 1)),
+        )
     }
 
     @Test
     fun metadata_soloPeso() {
-        assertEquals("80.0 kg", buildAnimalMetadata(animal(peso = 80f)))
+        assertEquals(
+            AnimalCardMetadata(lineOne = null, lineTwo = "80.0 kg"),
+            buildAnimalCardMetadata(animal(peso = 80f)),
+        )
     }
 
     @Test
     fun metadata_soloColor() {
-        assertEquals("Blanco", buildAnimalMetadata(animal(color = "Blanco")))
+        assertEquals(
+            AnimalCardMetadata(lineOne = null, lineTwo = "Blanco"),
+            buildAnimalCardMetadata(animal(color = "Blanco")),
+        )
+    }
+
+    @Test
+    fun metadata_razaYEdad() {
+        assertEquals(
+            AnimalCardMetadata(lineOne = "Holstein • 2 años", lineTwo = null),
+            buildAnimalCardMetadata(animal(raza = "Holstein", edad = 2)),
+        )
+    }
+
+    @Test
+    fun metadata_edadYPeso() {
+        assertEquals(
+            AnimalCardMetadata(lineOne = "2 años", lineTwo = "80.0 kg"),
+            buildAnimalCardMetadata(animal(edad = 2, peso = 80f)),
+        )
     }
 
     @Test
     fun metadata_completa() {
         assertEquals(
-            "2 años • 80.0 kg • Blanco",
-            buildAnimalMetadata(animal(edad = 2, peso = 80f, color = "Blanco")),
+            AnimalCardMetadata(
+                lineOne = "Holstein • 4 años",
+                lineTwo = "420.0 kg • Negro y blanco",
+            ),
+            buildAnimalCardMetadata(
+                animal(raza = "Holstein", edad = 4, peso = 420f, color = "Negro y blanco"),
+            ),
         )
     }
 
     @Test
     fun metadata_edadCeroSeMuestra() {
-        assertEquals("0 años", buildAnimalMetadata(animal(edad = 0)))
+        assertEquals(
+            AnimalCardMetadata(lineOne = "0 años", lineTwo = null),
+            buildAnimalCardMetadata(animal(edad = 0)),
+        )
     }
 
     @Test
     fun metadata_pesoCeroSeMuestra() {
-        assertEquals("0.0 kg", buildAnimalMetadata(animal(peso = 0f)))
+        assertEquals(
+            AnimalCardMetadata(lineOne = null, lineTwo = "0.0 kg"),
+            buildAnimalCardMetadata(animal(peso = 0f)),
+        )
     }
 
     @Test
     fun metadata_colorVacioNoSeMuestra() {
-        assertNull(buildAnimalMetadata(animal(color = "")))
+        assertNull(buildAnimalCardMetadata(animal(color = "")))
     }
 
     @Test
     fun metadata_colorEnBlancoNoSeMuestra() {
-        assertNull(buildAnimalMetadata(animal(color = "   ")))
+        assertNull(buildAnimalCardMetadata(animal(color = "   ")))
     }
 
     @Test
@@ -78,6 +135,7 @@ class AnimalListPresentationTest {
     }
 
     private fun animal(
+        raza: String = "SIN_ESPECIFICAR",
         edad: Int? = null,
         peso: Float? = null,
         color: String? = null,
@@ -85,7 +143,7 @@ class AnimalListPresentationTest {
         idAnimal = 1L,
         especie = EspecieAnimal.VACA,
         nombre = "Manchita",
-        raza = "SIN_ESPECIFICAR",
+        raza = raza,
         edad = edad,
         peso = peso,
         color = color,
