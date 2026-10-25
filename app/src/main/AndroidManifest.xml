@@ -41,6 +41,14 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".core.notifications.NotificationTimeZoneReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
