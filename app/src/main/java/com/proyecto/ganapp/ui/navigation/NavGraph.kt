@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,8 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.R
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.proyecto.ganapp.ui.features.animals.AnimalDetailScreen
 import com.proyecto.ganapp.ui.features.animals.AnimalEditScreen
@@ -162,17 +167,51 @@ private fun AppNavGraph(
     userId: Long,
 ) {
     val navController = rememberNavController()
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentEntry?.destination?.route
+    val showNavigationBar = GanAppTopLevelDestination.fromRoute(currentRoute) != null
 
+    fun navigateTopLevel(destination: GanAppTopLevelDestination) {
+        val route = when (destination) {
+            GanAppTopLevelDestination.Home -> Screen.Home.route
+            GanAppTopLevelDestination.Animals -> Screen.Animals.createRoute(userId)
+            GanAppTopLevelDestination.Notifications -> Screen.Notifications.createRoute(userId)
+        }
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (showNavigationBar) {
+                GanAppNavigationBar(
+                    currentRoute = currentRoute,
+                    onDestinationSelected = ::navigateTopLevel,
+                )
+            }
+        },
+    ) { innerPadding ->
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .consumeWindowInsets(innerPadding),
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
                 idUsuario = userId,
                 onRegistrarAnimal = { navController.navigate("register_animal/$userId") },
-                onVerAnimales = { navController.navigate("animals/$userId") },
-                onNotificaciones = { navController.navigate("notifications/$userId") },
+                onVerAnimales = { navigateTopLevel(GanAppTopLevelDestination.Animals) },
+                onNotificaciones = { navigateTopLevel(GanAppTopLevelDestination.Notifications) },
             )
         }
 
@@ -272,5 +311,6 @@ private fun AppNavGraph(
                 onBack = { navController.popBackStack() },
             )
         }
+    }
     }
 }
