@@ -2,8 +2,8 @@ package com.proyecto.ganapp.ui.features.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.proyecto.ganapp.domain.usecase.session.SaveSessionResult
-import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
+import com.proyecto.ganapp.domain.usecase.session.ActivateSessionResult
+import com.proyecto.ganapp.domain.usecase.session.ActivateSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginResult
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
@@ -18,14 +18,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val registerUserUseCase: RegisterUserUseCase,
-    private val saveSessionUseCase: SaveSessionUseCase,
+    private val activateSessionUseCase: ActivateSessionUseCase,
 ) : ViewModel() {
 
     private val _loginUiState = MutableStateFlow(LoginUiState())
@@ -104,12 +105,23 @@ class AuthViewModel @Inject constructor(
                 }
                 is LoginResult.Success -> {
                     val userId = result.authenticatedUser.idUsuario
-                    when (saveSessionUseCase(userId)) {
-                        SaveSessionResult.Success -> {
+                    val now = System.currentTimeMillis()
+                    val zoneId = ZoneId.systemDefault()
+                    when (
+                        activateSessionUseCase(
+                            userId = userId,
+                            now = now,
+                            zoneId = zoneId,
+                        )
+                    ) {
+                        ActivateSessionResult.Success,
+                        ActivateSessionResult.SuccessWithNotificationReconciliationFailure,
+                        -> {
                             _loginUiState.value = LoginUiState()
                         }
-                        SaveSessionResult.InvalidUserId,
-                        SaveSessionResult.UnexpectedError -> {
+                        ActivateSessionResult.InvalidUserId,
+                        ActivateSessionResult.SessionSaveFailure,
+                        -> {
                             _loginUiState.update {
                                 it.copy(
                                     isLoading = false,

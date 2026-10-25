@@ -1,9 +1,18 @@
 package com.proyecto.ganapp.ui.features.auth
 
+import com.proyecto.ganapp.domain.model.Notificacion
+import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
+import com.proyecto.ganapp.domain.model.NotificationCancelResult
+import com.proyecto.ganapp.domain.model.NotificationScheduleResult
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
+import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
+import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationAlarmsUseCase
+import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
+import com.proyecto.ganapp.domain.usecase.session.ActivateSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginValidationError
@@ -13,6 +22,7 @@ import com.proyecto.ganapp.testutil.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -34,16 +44,27 @@ class AuthViewModelTest {
 
     private lateinit var repository: FakeUsuarioRepository
     private lateinit var sessionRepository: FakeSessionRepository
+    private lateinit var notificationRepository: AuthActivationNotificacionRepository
     private lateinit var viewModel: AuthViewModel
 
     @Before
     fun setUp() {
         repository = FakeUsuarioRepository()
         sessionRepository = FakeSessionRepository()
+        notificationRepository = AuthActivationNotificacionRepository()
         viewModel = AuthViewModel(
             loginUseCase = LoginUseCase(repository),
             registerUserUseCase = RegisterUserUseCase(repository),
-            saveSessionUseCase = SaveSessionUseCase(sessionRepository),
+            activateSessionUseCase = ActivateSessionUseCase(
+                saveSessionUseCase = SaveSessionUseCase(sessionRepository),
+                reconcileNotificationAlarmsUseCase = ReconcileNotificationAlarmsUseCase(
+                    sessionRepository = sessionRepository,
+                    notificationRepository = notificationRepository,
+                    scheduleNotificationUseCase = ScheduleNotificationUseCase(
+                        AuthActivationNotificationScheduler(),
+                    ),
+                ),
+            ),
         )
     }
 
@@ -104,6 +125,7 @@ class AuthViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(0, repository.loginCallCount)
         assertEquals(0, sessionRepository.saveCallCount)
+        assertEquals(0, notificationRepository.calls)
     }
 
     @Test
@@ -119,6 +141,7 @@ class AuthViewModelTest {
         assertNull(state.generalError)
         assertFalse(state.isLoading)
         assertEquals(0, sessionRepository.saveCallCount)
+        assertEquals(0, notificationRepository.calls)
     }
 
     @Test
@@ -134,6 +157,7 @@ class AuthViewModelTest {
         assertNull(state.generalError)
         assertFalse(state.isLoading)
         assertEquals(0, sessionRepository.saveCallCount)
+        assertEquals(0, notificationRepository.calls)
     }
 
     @Test
@@ -150,6 +174,7 @@ class AuthViewModelTest {
         assertNull(state.passwordError)
         assertFalse(state.isLoading)
         assertEquals(0, sessionRepository.saveCallCount)
+        assertEquals(0, notificationRepository.calls)
     }
 
     @Test
@@ -166,6 +191,7 @@ class AuthViewModelTest {
         assertNull(state.passwordError)
         assertFalse(state.isLoading)
         assertEquals(0, sessionRepository.saveCallCount)
+        assertEquals(0, notificationRepository.calls)
     }
 
     @Test
@@ -179,6 +205,7 @@ class AuthViewModelTest {
 
         assertEquals(1, sessionRepository.saveCallCount)
         assertEquals(7L, sessionRepository.lastSavedUserId)
+        assertEquals(1, notificationRepository.calls)
         assertEquals(LoginUiState(), viewModel.loginUiState.value)
     }
 
@@ -383,6 +410,7 @@ class AuthViewModelTest {
 
             assertEquals(1, repository.loginCallCount)
             assertEquals(1, sessionRepository.saveCallCount)
+            assertEquals(1, notificationRepository.calls)
             assertEquals(LoginUiState(), viewModel.loginUiState.value)
         }
 
@@ -397,6 +425,38 @@ class AuthViewModelTest {
             advanceUntilIdle()
 
             assertEquals(987654321L, sessionRepository.lastSavedUserId)
+        }
+
+    @Test
+    fun lvmActivation01_idInvalido_muestraUnexpectedSinReconciliar() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 0L)
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            val state = viewModel.loginUiState.value
+            assertFalse(state.isLoading)
+            assertEquals(LoginGeneralError.UNEXPECTED, state.generalError)
+            assertEquals(0, sessionRepository.saveCallCount)
+            assertEquals(0, notificationRepository.calls)
+        }
+
+    @Test
+    fun lvmActivation02_reconciliacionDegradada_completaLoginSinError() =
+        runTest(mainDispatcherRule.testDispatcher) {
+            repository.loginUser = usuario(id = 7L)
+            notificationRepository.error = IllegalStateException("notifications")
+            viewModel.onLoginEmailChanged("user@example.com")
+            viewModel.onLoginPasswordChanged("password12")
+            viewModel.submitLogin()
+            advanceUntilIdle()
+
+            assertEquals(1, sessionRepository.saveCallCount)
+            assertEquals(1, notificationRepository.calls)
+            assertEquals(LoginUiState(), viewModel.loginUiState.value)
+            assertNull(viewModel.loginUiState.value.generalError)
         }
 
     @Test
@@ -937,7 +997,7 @@ class AuthViewModelTest {
         var saveException: Exception? = null
         var saveGate: CompletableDeferred<Unit>? = null
 
-        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(null)
+        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(lastSavedUserId)
 
         override suspend fun saveAuthenticatedUserId(userId: Long) {
             saveCallCount += 1
@@ -947,5 +1007,37 @@ class AuthViewModelTest {
         }
 
         override suspend fun clearAuthenticatedUserId() = Unit
+    }
+}
+
+private class AuthActivationNotificacionRepository : NotificacionRepository {
+    var calls: Int = 0
+    var error: Throwable? = null
+
+    override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> {
+        calls += 1
+        val failure = error
+        if (failure != null) {
+            return flow { throw failure }
+        }
+        return flowOf(emptyList())
+    }
+
+    override suspend fun insertNotification(notificacion: Notificacion): Long = 0L
+
+    override suspend fun updateNotification(notificacion: Notificacion) = Unit
+
+    override suspend fun deleteNotification(id: Long) = Unit
+
+    override suspend fun getNotificationById(id: Long): Notificacion? = null
+}
+
+private class AuthActivationNotificationScheduler : NotificationAlarmScheduler {
+    override fun scheduleNext(request: NotificationAlarmRequest): NotificationScheduleResult {
+        return NotificationScheduleResult.Scheduled(request.notificationId, request.triggerAtMillis)
+    }
+
+    override fun cancel(notificationId: Long): NotificationCancelResult {
+        return NotificationCancelResult.Cancelled(notificationId)
     }
 }
