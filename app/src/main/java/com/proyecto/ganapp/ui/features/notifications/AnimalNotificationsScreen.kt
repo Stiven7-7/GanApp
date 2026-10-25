@@ -19,7 +19,7 @@ fun AnimalNotificationsScreen(
 ) {
     val list by vm.list.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(animalId) {
         vm.load(animalId)
     }
 
@@ -56,8 +56,8 @@ fun NotificationItem(noti: Notificacion) {
             Text(noti.nombre, style = MaterialTheme.typography.titleLarge)
             Text("Tipo: ${noti.tipo}")
             Text("Ciclo: ${noti.seRepite}")
-            Text("Inicio: ${noti.fechaInicio}")
-            Text("Fin: ${noti.fechaFin}")
+            Text("Inicio: ${formatNotificationEpochDay(noti.fechaInicio)}")
+            Text("Fin: ${formatNotificationEpochDay(noti.fechaFin)}")
             Text("Hora: ${noti.hora}")
         }
     }

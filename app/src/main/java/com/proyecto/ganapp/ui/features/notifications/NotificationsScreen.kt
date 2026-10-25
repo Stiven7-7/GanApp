@@ -19,7 +19,7 @@ fun NotificationsScreen(
 ) {
     val notifications by viewModel.notifications.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userId) {
         viewModel.loadNotifications(userId)
     }
 
@@ -32,14 +32,24 @@ fun NotificationsScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            items(notifications) { noti ->
-                NotificationCard(noti)
-                Spacer(modifier = Modifier.height(8.dp))
+        if (notifications.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(16.dp)
+            ) {
+                Text("No tienes notificaciones creadas.")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(16.dp)
+            ) {
+                items(notifications) { noti ->
+                    NotificationCard(noti)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -54,7 +64,8 @@ fun NotificationCard(noti: Notificacion) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(noti.nombre, style = MaterialTheme.typography.titleMedium)
             Text("Tipo: ${noti.tipo}")
-            Text("Inicio: ${noti.fechaInicio}")
+            Text("Inicio: ${formatNotificationEpochDay(noti.fechaInicio)}")
+            Text("Hora: ${noti.hora}")
             Text("Repetición: ${noti.seRepite}")
         }
     }
