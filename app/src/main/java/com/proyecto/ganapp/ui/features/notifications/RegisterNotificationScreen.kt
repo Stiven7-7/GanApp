@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 import java.time.LocalDate
 import java.util.Calendar
@@ -118,6 +119,7 @@ fun RegisterNotificationScreen(
                         )
                     }
                 },
+                colors = ganAppTopAppBarColors(),
             )
         },
     ) { padding ->

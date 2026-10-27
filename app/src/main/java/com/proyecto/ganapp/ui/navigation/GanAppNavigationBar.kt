@@ -65,7 +65,7 @@ internal fun GanAppNavigationBar(
     val selected = GanAppTopLevelDestination.fromRoute(currentRoute)
     NavigationBar(
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         tonalElevation = 0.dp,
     ) {

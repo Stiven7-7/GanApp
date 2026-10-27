@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +68,7 @@ fun AssignNotificationScreen(
                         )
                     }
                 },
+                colors = ganAppTopAppBarColors(),
             )
         },
     ) { padding ->

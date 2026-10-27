@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.usecase.animal.RegisterAnimalValidationError
+import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,6 +133,7 @@ fun RegisterAnimalScreen(
                         )
                     }
                 },
+                colors = ganAppTopAppBarColors(),
             )
         },
     ) { padding ->

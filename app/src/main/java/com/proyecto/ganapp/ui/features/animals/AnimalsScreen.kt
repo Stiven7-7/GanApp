@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.ui.features.animals
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +58,7 @@ import coil.compose.AsyncImage
 import com.proyecto.ganapp.R
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
+import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +80,10 @@ fun AnimalsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            CenterAlignedTopAppBar(title = { Text("Mis Animales") })
+            CenterAlignedTopAppBar(
+                title = { Text("Mis Animales") },
+                colors = ganAppTopAppBarColors(),
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -131,14 +136,15 @@ fun AnimalsScreen(
                         .padding(padding)
                         .fillMaxSize(),
                 ) {
-                    val reserveFabColumn = maxWidth < 360.dp &&
-                        LocalDensity.current.fontScale < 1.5f
+                    val narrow = maxWidth < 360.dp
+                    val highScale = LocalDensity.current.fontScale >= 1.5f
+                    val reserveFabColumn = narrow && !highScale
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = GanAppSpacing.md,
                             top = GanAppSpacing.md,
-                            end = if (reserveFabColumn) {
+                            end = if (narrow) {
                                 GanAppSpacing.xxl + GanAppSpacing.md
                             } else {
                                 GanAppSpacing.md
@@ -180,6 +186,7 @@ fun AnimalCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         BoxWithConstraints {
@@ -348,8 +355,6 @@ private fun AnimalCardMetadataLines(metadata: AnimalCardMetadata?) {
             text = metadata.lineOne,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
     if (metadata?.lineTwo != null) {
@@ -357,8 +362,6 @@ private fun AnimalCardMetadataLines(metadata: AnimalCardMetadata?) {
             text = metadata.lineTwo,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
 }

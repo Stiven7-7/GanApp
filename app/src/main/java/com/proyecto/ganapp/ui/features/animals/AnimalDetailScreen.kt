@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.ui.features.animals
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
+import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,6 +89,7 @@ fun AnimalDetailScreen(
                         }
                     }
                 },
+                colors = ganAppTopAppBarColors(),
             )
         },
     ) { padding ->
@@ -223,7 +226,11 @@ private fun AnimalDetailContent(
             Spacer(modifier = Modifier.height(GanAppSpacing.xs))
             Surface(
                 shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
             ) {
                 Column(
                     modifier = Modifier.padding(GanAppSpacing.md),

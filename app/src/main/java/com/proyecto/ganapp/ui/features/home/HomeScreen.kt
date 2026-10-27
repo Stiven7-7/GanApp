@@ -1,5 +1,7 @@
 package com.proyecto.ganapp.ui.features.home
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +21,11 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,12 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.proyecto.ganapp.R
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @Composable
@@ -120,7 +124,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
 
             Text(
-                text = "Tus animales",
+                text = "Accesos",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -130,7 +134,7 @@ fun HomeScreen(
             HomeDestinationRow(
                 title = "Animales",
                 subtitle = "Consulta tus animales registrados",
-                icon = Icons.Outlined.Pets,
+                iconRes = R.drawable.def_vaca,
                 onClick = onVerAnimales,
             )
 
@@ -154,31 +158,42 @@ private fun HomeHeader(
     logoutUiState: HomeLogoutUiState,
     onLogout: () -> Unit,
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Bienvenido",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!nombre.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(GanAppSpacing.xxs))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(GanAppSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = nombre,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = "Bienvenido",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
+                if (!nombre.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(GanAppSpacing.xxs))
+                    Text(
+                        text = nombre,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
+            Spacer(modifier = Modifier.width(GanAppSpacing.sm))
+            HomeAccountMenu(
+                isLoading = logoutUiState.isLoading,
+                hasError = logoutUiState.error == HomeLogoutError.UNEXPECTED,
+                onLogout = onLogout,
+            )
         }
-        Spacer(modifier = Modifier.width(GanAppSpacing.sm))
-        HomeAccountMenu(
-            isLoading = logoutUiState.isLoading,
-            hasError = logoutUiState.error == HomeLogoutError.UNEXPECTED,
-            onLogout = onLogout,
-        )
     }
 }
 
@@ -202,7 +217,7 @@ private fun HomeAccountMenu(
             Icon(
                 imageVector = Icons.Outlined.AccountCircle,
                 contentDescription = "Cuenta",
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
         DropdownMenu(
@@ -240,17 +255,19 @@ private fun HomeAccountMenu(
 private fun HomeDestinationRow(
     title: String,
     subtitle: String,
-    icon: ImageVector,
     onClick: () -> Unit,
+    icon: ImageVector? = null,
+    @DrawableRes iconRes: Int? = null,
 ) {
     Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = GanAppSpacing.xxl),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
     ) {
@@ -259,12 +276,22 @@ private fun HomeDestinationRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            } else if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
             Column(
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
             ) {
                 Text(
@@ -278,6 +305,11 @@ private fun HomeDestinationRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
