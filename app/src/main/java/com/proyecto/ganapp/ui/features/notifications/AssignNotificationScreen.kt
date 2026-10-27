@@ -1,14 +1,32 @@
 package com.proyecto.ganapp.ui.features.notifications
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.proyecto.ganapp.domain.model.Notificacion
+import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,68 +50,66 @@ fun AssignNotificationScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Asignar notificación") }
+                title = { Text("Asignar notificación") },
+                expandedHeight = if (LocalDensity.current.fontScale >= 1.5f) {
+                    GanAppSpacing.xxl * 3
+                } else {
+                    TopAppBarDefaults.TopAppBarExpandedHeight
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                        )
+                    }
+                },
             )
-        }
+        },
     ) { padding ->
-
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize()
+                .fillMaxSize(),
+            contentPadding = PaddingValues(GanAppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
         ) {
-
             if (notifications.isEmpty()) {
-                Text(
-                    "No tienes notificaciones creadas aún.",
-                    modifier = Modifier.padding(16.dp)
-                )
-            } else {
-                LazyColumn {
-                    items(notifications) { noti ->
-                        NotificationAssignCard(
-                            noti = noti,
-                            enabled = !isAssigning,
-                            onAssign = {
-                                viewModel.assign(
-                                    userId = userId,
-                                    animalId = animalId,
-                                    notificationId = noti.idNotificacion,
-                                )
-                            }
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
+                item {
+                    NotificationEmptyState(
+                        title = "No tienes notificaciones creadas aún.",
+                    )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun NotificationAssignCard(
-    noti: Notificacion,
-    enabled: Boolean,
-    onAssign: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(noti.nombre, style = MaterialTheme.typography.titleMedium)
-            Text("Tipo: ${noti.tipo}")
-            Text("Repetición: ${noti.seRepite}")
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = onAssign,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Asignar a este animal")
+            } else {
+                items(notifications) { noti ->
+                    NotificationVisualCard(
+                        title = noti.nombre,
+                        type = noti.tipo,
+                        date = formatNotificationEpochDay(noti.fechaInicio),
+                        time = noti.hora,
+                        recurrence = noti.seRepite,
+                        action = {
+                            Button(
+                                onClick = {
+                                    viewModel.assign(
+                                        userId = userId,
+                                        animalId = animalId,
+                                        notificationId = noti.idNotificacion,
+                                    )
+                                },
+                                enabled = !isAssigning,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = GanAppSpacing.xxl),
+                            ) {
+                                Text("Asignar a este animal")
+                            }
+                        },
+                    )
+                }
             }
         }
     }
