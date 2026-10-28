@@ -9,6 +9,7 @@ import com.proyecto.ganapp.testutil.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -126,10 +127,338 @@ class AnimalsViewModelTest {
         assertEquals(AnimalsListUiState.Error(failure), viewModel.listUiState.value)
     }
 
+    @Test
+    fun queryVacia_muestraTodos() = runTest(mainDispatcherRule.testDispatcher) {
+        val animals = searchFixture()
+        repository.animals = animals
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("")
+
+        assertEquals(animals, visibleAnimals())
+    }
+
+    @Test
+    fun querySoloEspacios_noFiltraPorNombre() = runTest(mainDispatcherRule.testDispatcher) {
+        val animals = searchFixture()
+        repository.animals = animals
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("   ")
+
+        assertEquals(animals, visibleAnimals())
+    }
+
+    @Test
+    fun queryConEspacios_seRecortaAntesDeComparar() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = searchFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("  lo  ")
+
+        assertEquals(listOf("Lola", "Manolo"), visibleNames())
+    }
+
+    @Test
+    fun queryIgnoraMayusculas() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("LOLA")
+
+        assertEquals(listOf("Lola"), visibleNames())
+    }
+
+    @Test
+    fun queryContains_incluyeCoincidenciasParciales() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = searchFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+
+        assertEquals(listOf("Lola", "Manolo"), visibleNames())
+    }
+
+    @Test
+    fun querySinCoincidencias_publicaNoResults() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = searchFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("zzz")
+
+        assertEquals(AnimalsListUiState.NoResults, viewModel.listUiState.value)
+    }
+
+    @Test
+    fun limpiarQuery_restauraLaListaCompleta() = runTest(mainDispatcherRule.testDispatcher) {
+        val animals = searchFixture()
+        repository.animals = animals
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+        assertEquals(listOf("Lola", "Manolo"), visibleNames())
+
+        viewModel.updateSearchQuery("")
+
+        assertEquals(animals, visibleAnimals())
+    }
+
+    @Test
+    fun speciesAll_incluyeLegacy() = runTest(mainDispatcherRule.testDispatcher) {
+        val animals = speciesFixture()
+        repository.animals = animals
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.ALL)
+
+        assertEquals(animals, visibleAnimals())
+    }
+
+    @Test
+    fun speciesVaca_soloVacas() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = speciesFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        assertEquals(listOf(EspecieAnimal.VACA), visibleSpecies())
+    }
+
+    @Test
+    fun speciesCerdo_soloCerdos() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = speciesFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.CERDO)
+
+        assertEquals(listOf(EspecieAnimal.CERDO), visibleSpecies())
+    }
+
+    @Test
+    fun speciesOveja_soloOvejas() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = speciesFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.OVEJA)
+
+        assertEquals(listOf(EspecieAnimal.OVEJA), visibleSpecies())
+    }
+
+    @Test
+    fun searchYSpecies_seAcumulan() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = combinedFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        assertEquals(
+            listOf("Lola" to EspecieAnimal.VACA, "Manolo" to EspecieAnimal.VACA),
+            visibleIdentity(),
+        )
+    }
+
+    @Test
+    fun cambiarSpecies_conservaQuery() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = combinedFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.ALL)
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        assertEquals("lo", viewModel.searchQuery.value)
+        assertEquals(
+            listOf("Lola" to EspecieAnimal.VACA, "Manolo" to EspecieAnimal.VACA),
+            visibleIdentity(),
+        )
+    }
+
+    @Test
+    fun limpiarSearch_conservaSpecies() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = combinedFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSearchQuery("")
+
+        assertEquals(AnimalSpeciesFilter.VACA, viewModel.speciesFilter.value)
+        assertEquals(listOf(EspecieAnimal.VACA, EspecieAnimal.VACA), visibleSpecies())
+    }
+
+    @Test
+    fun limpiarAmbosFiltros_restauraColeccionCompleta() = runTest(mainDispatcherRule.testDispatcher) {
+        val animals = combinedFixture()
+        repository.animals = animals
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+        viewModel.updateSearchQuery("")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.ALL)
+
+        assertEquals(animals, visibleAnimals())
+    }
+
+    @Test
+    fun filtrosNoReemplazanLaFuente() = runTest(mainDispatcherRule.testDispatcher) {
+        val source = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+        )
+        repository.animals = source
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("Lola")
+        assertEquals(listOf("Lola"), visibleNames())
+
+        viewModel.updateSearchQuery("")
+        assertEquals(source, visibleAnimals())
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.OVEJA)
+        assertEquals(listOf("Nube"), visibleNames())
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.ALL)
+        assertEquals(source, visibleAnimals())
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun cambiarFiltros_noVuelveAConsultarAnimales() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = combinedFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        assertEquals(1, repository.getAllAnimalsCalls)
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+        viewModel.updateSearchQuery("")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.ALL)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun nuevaEmision_conservaFiltrosActivos() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = combinedFixture()
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        repository.animals = listOf(
+            sampleAnimal(id = 10L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 11L, especie = EspecieAnimal.CERDO, nombre = "Lola"),
+            sampleAnimal(id = 12L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+        )
+        advanceUntilIdle()
+
+        assertEquals("lo", viewModel.searchQuery.value)
+        assertEquals(AnimalSpeciesFilter.VACA, viewModel.speciesFilter.value)
+        assertEquals(listOf("Lola" to EspecieAnimal.VACA), visibleIdentity())
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun favoritoNoAlteraElFiltro() = runTest(mainDispatcherRule.testDispatcher) {
+        val favorite = sampleAnimal(
+            id = 1L,
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            esFavorito = true,
+        )
+        val regular = sampleAnimal(
+            id = 2L,
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            esFavorito = false,
+        )
+        repository.animals = listOf(favorite, regular)
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lola")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+        assertEquals(listOf(true, false), visibleAnimals().map { it.esFavorito })
+
+        viewModel.updateSearchQuery("nube")
+        assertEquals(AnimalsListUiState.NoResults, viewModel.listUiState.value)
+
+        viewModel.updateSearchQuery("lola")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.CERDO)
+        assertEquals(AnimalsListUiState.NoResults, viewModel.listUiState.value)
+    }
+
+    @Test
+    fun listaFuenteVaciaConFiltros_sigueEnEmpty() = runTest(mainDispatcherRule.testDispatcher) {
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        assertEquals(AnimalsListUiState.Empty, viewModel.listUiState.value)
+    }
+
+    private fun searchFixture() = listOf(
+        sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+        sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Manolo"),
+        sampleAnimal(id = 3L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+    )
+
+    private fun speciesFixture() = listOf(
+        sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+        sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+        sampleAnimal(id = 3L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+        sampleAnimal(id = 4L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+    )
+
+    private fun combinedFixture() = listOf(
+        sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+        sampleAnimal(id = 2L, especie = EspecieAnimal.VACA, nombre = "Manolo"),
+        sampleAnimal(id = 3L, especie = EspecieAnimal.CERDO, nombre = "Lola"),
+        sampleAnimal(id = 4L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+        sampleAnimal(id = 5L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+    )
+
+    private fun visibleAnimals(): List<Animal> {
+        val state = viewModel.listUiState.value
+        assertTrue(state is AnimalsListUiState.Success)
+        return (state as AnimalsListUiState.Success).animals
+    }
+
+    private fun visibleNames() = visibleAnimals().map { it.nombre }
+
+    private fun visibleSpecies() = visibleAnimals().map { it.especie }
+
+    private fun visibleIdentity() = visibleAnimals().map { it.nombre to it.especie }
+
     private fun sampleAnimal(
         id: Long,
         especie: EspecieAnimal,
         nombre: String,
+        esFavorito: Boolean = false,
     ) = Animal(
         idAnimal = id,
         especie = especie,
@@ -140,19 +469,27 @@ class AnimalsViewModelTest {
         color = "Blanco",
         fotoUri = null,
         idUsuario = 7L,
+        esFavorito = esFavorito,
     )
 
     private class FakeAnimalRepository : AnimalRepository {
         var insertCalls = 0
         var inserted: Animal? = null
         var insertGate: CompletableDeferred<Long>? = null
-        var animals: List<Animal> = emptyList()
+        var getAllAnimalsCalls = 0
         var animalsFlow: Flow<List<Animal>>? = null
         var requestedUserId: Long? = null
+        private val animalsState = MutableStateFlow<List<Animal>>(emptyList())
+        var animals: List<Animal>
+            get() = animalsState.value
+            set(value) {
+                animalsState.value = value
+            }
 
         override fun getAllAnimals(userId: Long): Flow<List<Animal>> {
             requestedUserId = userId
-            return animalsFlow ?: flowOf(animals)
+            getAllAnimalsCalls += 1
+            return animalsFlow ?: animalsState
         }
 
         override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())

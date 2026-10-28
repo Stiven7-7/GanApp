@@ -3,6 +3,8 @@ package com.proyecto.ganapp.ui.features.animals
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,10 +31,12 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,6 +76,8 @@ fun AnimalsScreen(
     viewModel: AnimalsViewModel = hiltViewModel()
 ) {
     val listState by viewModel.listUiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val speciesFilter by viewModel.speciesFilter.collectAsState()
 
     LaunchedEffect(userId) {
         viewModel.loadAnimals(userId)
@@ -129,13 +135,122 @@ fun AnimalsScreen(
                 )
             }
 
-            is AnimalsListUiState.Success -> {
-                val fabClearance = GanAppSpacing.xxl + GanAppSpacing.lg
-                BoxWithConstraints(
+            AnimalsListUiState.NoResults,
+            is AnimalsListUiState.Success,
+            -> {
+                Column(
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxSize(),
                 ) {
+                    AnimalsSearchAndFilters(
+                        searchQuery = searchQuery,
+                        speciesFilter = speciesFilter,
+                        onSearchQueryChange = viewModel::updateSearchQuery,
+                        onSpeciesFilterChange = viewModel::updateSpeciesFilter,
+                    )
+                    if (state is AnimalsListUiState.Success) {
+                        AnimalsLoadedList(
+                            animals = state.animals,
+                            onAnimalClick = onAnimalClick,
+                            onAssignNotification = onAssignNotification,
+                            onViewNotifications = onViewNotifications,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                        )
+                    } else {
+                        AnimalsNoResultsState(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AnimalsSearchAndFilters(
+    searchQuery: String,
+    speciesFilter: AnimalSpeciesFilter,
+    onSearchQueryChange: (String) -> Unit,
+    onSpeciesFilterChange: (AnimalSpeciesFilter) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = GanAppSpacing.md,
+                top = GanAppSpacing.md,
+                end = GanAppSpacing.md,
+            ),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Buscar por nombre") },
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        ) {
+            AnimalSpeciesFilterChip(
+                label = "Todos",
+                selected = speciesFilter == AnimalSpeciesFilter.ALL,
+                onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.ALL) },
+            )
+            AnimalSpeciesFilterChip(
+                label = "Vacas",
+                selected = speciesFilter == AnimalSpeciesFilter.VACA,
+                onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.VACA) },
+            )
+            AnimalSpeciesFilterChip(
+                label = "Cerdos",
+                selected = speciesFilter == AnimalSpeciesFilter.CERDO,
+                onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.CERDO) },
+            )
+            AnimalSpeciesFilterChip(
+                label = "Ovejas",
+                selected = speciesFilter == AnimalSpeciesFilter.OVEJA,
+                onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.OVEJA) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AnimalSpeciesFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+    )
+}
+
+@Composable
+private fun AnimalsLoadedList(
+    animals: List<Animal>,
+    onAnimalClick: (Long) -> Unit,
+    onAssignNotification: (Long) -> Unit,
+    onViewNotifications: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fabClearance = GanAppSpacing.xxl + GanAppSpacing.lg
+    BoxWithConstraints(modifier = modifier) {
                     val narrow = maxWidth < 360.dp
                     val highScale = LocalDensity.current.fontScale >= 1.5f
                     val reserveFabColumn = narrow && !highScale
@@ -154,7 +269,7 @@ fun AnimalsScreen(
                         verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
                     ) {
                         items(
-                            items = state.animals,
+                            items = animals,
                             key = { animal -> animal.idAnimal },
                         ) { animal ->
                             AnimalCard(
@@ -165,9 +280,29 @@ fun AnimalsScreen(
                             )
                         }
                     }
-                }
-            }
-        }
+    }
+}
+
+@Composable
+private fun AnimalsNoResultsState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(GanAppSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "No se encontraron animales.",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(GanAppSpacing.xs))
+        Text(
+            text = "Prueba con otra búsqueda o especie.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
