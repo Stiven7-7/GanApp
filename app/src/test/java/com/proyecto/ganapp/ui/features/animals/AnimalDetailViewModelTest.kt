@@ -3,6 +3,7 @@ package com.proyecto.ganapp.ui.features.animals
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.repository.AnimalRepository
+import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
 import com.proyecto.ganapp.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,13 +23,15 @@ class AnimalDetailViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repository: FakeAnimalRepository
+    private lateinit var session: FakeSessionRepository
     private lateinit var viewModel: AnimalDetailViewModel
 
     @Before
     fun setUp() {
         repository = FakeAnimalRepository()
+        session = FakeSessionRepository(userId = 7L)
         viewModel = AnimalDetailViewModel(
-            getAnimalByIdUseCase = GetAnimalByIdUseCase(repository),
+            getAnimalByIdUseCase = GetAnimalByIdUseCase(repository, session),
         )
     }
 
@@ -47,6 +50,17 @@ class AnimalDetailViewModelTest {
 
         assertEquals(AnimalDetailUiState.Success(animal), viewModel.uiState.value)
         assertEquals(animal.idAnimal, repository.requestedId)
+    }
+
+    @Test
+    fun animalAjeno_publicaNotFound() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animal = sampleAnimal()
+        session.userId = 99L
+
+        viewModel.loadAnimal(4L)
+        advanceUntilIdle()
+
+        assertEquals(AnimalDetailUiState.NotFound, viewModel.uiState.value)
     }
 
     @Test
@@ -133,5 +147,17 @@ class AnimalDetailViewModelTest {
         override suspend fun updateAnimal(animal: Animal) = error("unused")
 
         override suspend fun deleteAnimal(id: Long) = error("unused")
+    }
+
+    private class FakeSessionRepository(
+        userId: Long?,
+    ) : SessionRepository {
+        var userId: Long? = userId
+
+        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(userId)
+
+        override suspend fun saveAuthenticatedUserId(userId: Long) = error("unused")
+
+        override suspend fun clearAuthenticatedUserId() = error("unused")
     }
 }

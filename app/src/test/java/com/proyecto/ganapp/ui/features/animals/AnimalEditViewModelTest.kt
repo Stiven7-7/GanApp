@@ -3,6 +3,7 @@ package com.proyecto.ganapp.ui.features.animals
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.repository.AnimalRepository
+import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
 import com.proyecto.ganapp.domain.usecase.animal.UpdateAnimalUseCase
 import com.proyecto.ganapp.domain.usecase.animal.UpdateAnimalValidationError
@@ -26,14 +27,16 @@ class AnimalEditViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repository: FakeAnimalRepository
+    private lateinit var session: FakeSessionRepository
     private lateinit var viewModel: AnimalEditViewModel
 
     @Before
     fun setUp() {
         repository = FakeAnimalRepository()
+        session = FakeSessionRepository(userId = 7L)
         viewModel = AnimalEditViewModel(
-            getAnimalByIdUseCase = GetAnimalByIdUseCase(repository),
-            updateAnimalUseCase = UpdateAnimalUseCase(repository),
+            getAnimalByIdUseCase = GetAnimalByIdUseCase(repository, session),
+            updateAnimalUseCase = UpdateAnimalUseCase(repository, session),
         )
     }
 
@@ -51,6 +54,30 @@ class AnimalEditViewModelTest {
         advanceUntilIdle()
 
         assertEquals(AnimalEditUiState.Ready(animal), viewModel.uiState.value)
+    }
+
+    @Test
+    fun animalAjeno_publicaNotFoundYNoQuedaEditable() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.stored = sample()
+        session.userId = 99L
+
+        viewModel.loadAnimal(4L)
+        advanceUntilIdle()
+
+        assertEquals(AnimalEditUiState.NotFound, viewModel.uiState.value)
+
+        viewModel.saveAnimal(
+            especie = EspecieAnimal.CERDO,
+            nombre = "Ajeno",
+            edad = 1,
+            peso = 10f,
+            color = "Negro",
+            fotoUri = "content://ajena",
+        )
+        advanceUntilIdle()
+
+        assertEquals(AnimalEditUiState.NotFound, viewModel.uiState.value)
+        assertEquals(0, repository.updateCalls)
     }
 
     @Test
@@ -226,5 +253,17 @@ class AnimalEditViewModelTest {
         }
 
         override suspend fun deleteAnimal(id: Long) = error("unused")
+    }
+
+    private class FakeSessionRepository(
+        userId: Long?,
+    ) : SessionRepository {
+        var userId: Long? = userId
+
+        override fun observeAuthenticatedUserId(): Flow<Long?> = flowOf(userId)
+
+        override suspend fun saveAuthenticatedUserId(userId: Long) = error("unused")
+
+        override suspend fun clearAuthenticatedUserId() = error("unused")
     }
 }

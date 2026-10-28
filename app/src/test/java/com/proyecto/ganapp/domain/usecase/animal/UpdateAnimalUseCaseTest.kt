@@ -3,7 +3,9 @@ package com.proyecto.ganapp.domain.usecase.animal
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.repository.AnimalRepository
+import com.proyecto.ganapp.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -17,12 +19,14 @@ import kotlin.coroutines.cancellation.CancellationException
 class UpdateAnimalUseCaseTest {
 
     private lateinit var repository: FakeAnimalRepository
+    private lateinit var session: FakeSessionRepository
     private lateinit var useCase: UpdateAnimalUseCase
 
     @Before
     fun setUp() {
         repository = FakeAnimalRepository()
-        useCase = UpdateAnimalUseCase(repository)
+        session = FakeSessionRepository(userId = 7L)
+        useCase = UpdateAnimalUseCase(repository, session)
     }
 
     @Test
@@ -154,6 +158,30 @@ class UpdateAnimalUseCaseTest {
     }
 
     @Test
+    fun usuarioDistinto_esNotFoundSinActualizar() = runTest {
+        repository.reset(original())
+        session.userId = 99L
+
+        assertEquals(UpdateAnimalResult.NotFound, useCase(request(nombre = "Ajeno")))
+        assertEquals(1, repository.getCalls)
+        assertEquals(0, repository.updateCalls)
+        assertNull(repository.updated)
+    }
+
+    @Test
+    fun sesionAusente_esNotFoundSinActualizar() = runTest {
+        repository.reset(original())
+        listOf<Long?>(null, 0L, -1L).forEach { userId ->
+            repository.reset(original())
+            session.userId = userId
+
+            assertEquals(UpdateAnimalResult.NotFound, useCase(request()))
+            assertEquals(0, repository.getCalls)
+            assertEquals(0, repository.updateCalls)
+        }
+    }
+
+    @Test
     fun idInvalidoOInexistente_esNotFoundSinActualizar() = runTest {
         repository.reset(original())
         assertEquals(UpdateAnimalResult.NotFound, useCase(request(animalId = 0L)))
@@ -196,6 +224,24 @@ class UpdateAnimalUseCaseTest {
             thrown = exception
         }
         assertSame(cancellation, thrown)
+        assertEquals(0, repository.updateCalls)
+    }
+
+    @Test
+    fun cancelacionDeSesion_sePropagaSinActualizar() = runTest {
+        val cancellation = CancellationException("sesion")
+        repository.reset(original())
+        session.error = cancellation
+        var thrown: Throwable? = null
+
+        try {
+            useCase(request())
+        } catch (exception: CancellationException) {
+            thrown = exception
+        }
+
+        assertSame(cancellation, thrown)
+        assertEquals(0, repository.getCalls)
         assertEquals(0, repository.updateCalls)
     }
 
@@ -276,5 +322,21 @@ class UpdateAnimalUseCaseTest {
         }
 
         override suspend fun deleteAnimal(id: Long) = error("unused")
+    }
+
+    private class FakeSessionRepository(
+        userId: Long?,
+    ) : SessionRepository {
+        var userId: Long? = userId
+        var error: Throwable? = null
+
+        override fun observeAuthenticatedUserId(): Flow<Long?> {
+            val failure = error
+            return if (failure != null) flow { throw failure } else flowOf(userId)
+        }
+
+        override suspend fun saveAuthenticatedUserId(userId: Long) = error("unused")
+
+        override suspend fun clearAuthenticatedUserId() = error("unused")
     }
 }
