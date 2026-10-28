@@ -221,7 +221,7 @@ class AppDatabaseMigration7To8Test {
 
     private fun openAppDatabase(): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
             .build()
     }
 

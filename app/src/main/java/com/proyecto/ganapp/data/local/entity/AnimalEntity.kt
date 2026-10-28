@@ -1,5 +1,6 @@
 package com.proyecto.ganapp.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -28,4 +29,6 @@ data class AnimalEntity(
     val color: String?,
     val idUsuario: Long,
     val fotoUri: String?,
+    @ColumnInfo(defaultValue = "0")
+    val esFavorito: Boolean = false,
 )

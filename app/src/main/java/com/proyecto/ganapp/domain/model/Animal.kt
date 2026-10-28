@@ -10,4 +10,5 @@ data class Animal(
     val color: String?,
     val fotoUri: String?,
     val idUsuario: Long,
+    val esFavorito: Boolean = false,
 )

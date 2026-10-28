@@ -35,6 +35,7 @@ class AnimalMapperTest {
         assertEquals("Rosa", animal.color)
         assertEquals("content://ganapp/rosado", animal.fotoUri)
         assertEquals(4L, animal.idUsuario)
+        assertEquals(false, animal.esFavorito)
     }
 
     @Test
@@ -62,6 +63,7 @@ class AnimalMapperTest {
         assertEquals("Blanco", entity.color)
         assertEquals("content://ganapp/nube", entity.fotoUri)
         assertEquals(8L, entity.idUsuario)
+        assertEquals(false, entity.esFavorito)
     }
 
     @Test
@@ -143,6 +145,73 @@ class AnimalMapperTest {
         )
 
         assertEquals(original, original.toEntity().toDomain())
+    }
+
+    @Test
+    fun esFavoritoTrue_sePropagaEnAmbasDirecciones() {
+        val entity = AnimalEntity(
+            idAnimal = 9L,
+            especie = EspecieAnimal.CERDO,
+            nombre = "Rosado",
+            raza = "Duroc",
+            edad = 2,
+            peso = 80.5f,
+            color = "Rosa",
+            idUsuario = 4L,
+            fotoUri = "content://ganapp/rosado",
+            esFavorito = true,
+        )
+        val animal = Animal(
+            idAnimal = 11L,
+            especie = EspecieAnimal.OVEJA,
+            nombre = "Nube",
+            raza = "Merino",
+            edad = 1,
+            peso = 42f,
+            color = "Blanco",
+            fotoUri = "content://ganapp/nube",
+            idUsuario = 8L,
+            esFavorito = true,
+        )
+
+        assertEquals(true, entity.toDomain().esFavorito)
+        assertEquals(true, animal.toEntity().esFavorito)
+    }
+
+    @Test
+    fun esFavoritoTrue_sobreviveElRoundTrip() {
+        val original = Animal(
+            idAnimal = 21L,
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            raza = "Holstein",
+            edad = 4,
+            peso = 420f,
+            color = "Negro",
+            fotoUri = "content://ganapp/lola",
+            idUsuario = 7L,
+            esFavorito = true,
+        )
+
+        assertEquals(true, original.toEntity().toDomain().esFavorito)
+        assertEquals(original, original.toEntity().toDomain())
+    }
+
+    @Test
+    fun esFavoritoOmitido_esFalse() {
+        val animal = Animal(
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            raza = "Holstein",
+            edad = null,
+            peso = null,
+            color = null,
+            fotoUri = null,
+            idUsuario = 1L,
+        )
+
+        assertEquals(false, animal.esFavorito)
+        assertEquals(false, animal.toEntity().esFavorito)
     }
 
     private fun sample(raza: String): Animal {

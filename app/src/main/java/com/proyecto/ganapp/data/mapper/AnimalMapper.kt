@@ -13,6 +13,7 @@ fun AnimalEntity.toDomain(): Animal = Animal(
     color = color,
     fotoUri = fotoUri,
     idUsuario = idUsuario,
+    esFavorito = esFavorito,
 )
 
 fun Animal.toEntity(): AnimalEntity = AnimalEntity(
@@ -25,4 +26,5 @@ fun Animal.toEntity(): AnimalEntity = AnimalEntity(
     color = color,
     fotoUri = fotoUri,
     idUsuario = idUsuario,
+    esFavorito = esFavorito,
 )
