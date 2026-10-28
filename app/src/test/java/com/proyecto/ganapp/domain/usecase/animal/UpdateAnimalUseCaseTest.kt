@@ -162,7 +162,10 @@ class UpdateAnimalUseCaseTest {
         repository.reset(original())
         session.userId = 99L
 
-        assertEquals(UpdateAnimalResult.NotFound, useCase(request(nombre = "Ajeno")))
+        assertEquals(
+            UpdateAnimalResult.NotFound,
+            useCase(request(nombre = "Ajeno", esFavorito = true)),
+        )
         assertEquals(1, repository.getCalls)
         assertEquals(0, repository.updateCalls)
         assertNull(repository.updated)
@@ -175,7 +178,7 @@ class UpdateAnimalUseCaseTest {
             repository.reset(original())
             session.userId = userId
 
-            assertEquals(UpdateAnimalResult.NotFound, useCase(request()))
+            assertEquals(UpdateAnimalResult.NotFound, useCase(request(esFavorito = true)))
             assertEquals(0, repository.getCalls)
             assertEquals(0, repository.updateCalls)
         }
@@ -245,6 +248,45 @@ class UpdateAnimalUseCaseTest {
         assertEquals(0, repository.updateCalls)
     }
 
+    @Test
+    fun favorito_falseATrue_conservaIdentidad() = runTest {
+        repository.reset(original(esFavorito = false, raza = " Holstein "))
+        val result = useCase(request(esFavorito = true)) as UpdateAnimalResult.Success
+
+        assertEquals(true, result.animal.esFavorito)
+        assertEquals(true, repository.updated?.esFavorito)
+        assertEquals(4L, result.animal.idAnimal)
+        assertEquals(7L, result.animal.idUsuario)
+        assertEquals(" Holstein ", result.animal.raza)
+    }
+
+    @Test
+    fun favorito_trueAFalse() = runTest {
+        repository.reset(original(esFavorito = true))
+        val result = useCase(request(esFavorito = false)) as UpdateAnimalResult.Success
+
+        assertEquals(false, result.animal.esFavorito)
+        assertEquals(false, repository.updated?.esFavorito)
+    }
+
+    @Test
+    fun favorito_trueSeMantiene() = runTest {
+        repository.reset(original(esFavorito = true))
+        val result = useCase(request(esFavorito = true)) as UpdateAnimalResult.Success
+
+        assertEquals(true, result.animal.esFavorito)
+        assertEquals(true, repository.updated?.esFavorito)
+    }
+
+    @Test
+    fun favorito_falseSeMantiene() = runTest {
+        repository.reset(original(esFavorito = false))
+        val result = useCase(request(esFavorito = false)) as UpdateAnimalResult.Success
+
+        assertEquals(false, result.animal.esFavorito)
+        assertEquals(false, repository.updated?.esFavorito)
+    }
+
     private fun original(
         especie: EspecieAnimal = EspecieAnimal.VACA,
         nombre: String = "Lola",
@@ -253,6 +295,7 @@ class UpdateAnimalUseCaseTest {
         peso: Float? = 80f,
         color: String? = "Blanco",
         fotoUri: String? = "content://ganapp/lola",
+        esFavorito: Boolean = false,
     ) = Animal(
         idAnimal = 4L,
         especie = especie,
@@ -263,6 +306,7 @@ class UpdateAnimalUseCaseTest {
         color = color,
         fotoUri = fotoUri,
         idUsuario = 7L,
+        esFavorito = esFavorito,
     )
 
     private fun request(
@@ -273,6 +317,7 @@ class UpdateAnimalUseCaseTest {
         peso: Float? = 80f,
         color: String? = "Blanco",
         fotoUri: String? = "content://ganapp/lola",
+        esFavorito: Boolean = false,
     ) = UpdateAnimalRequest(
         animalId = animalId,
         especie = especie,
@@ -281,6 +326,7 @@ class UpdateAnimalUseCaseTest {
         peso = peso,
         color = color,
         fotoUri = fotoUri,
+        esFavorito = esFavorito,
     )
 
     private class FakeAnimalRepository : AnimalRepository {

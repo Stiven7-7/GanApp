@@ -80,6 +80,7 @@ class UpdateAnimalUseCase @Inject constructor(
             peso = request.peso,
             color = colorNormalizado,
             fotoUri = request.fotoUri,
+            esFavorito = request.esFavorito,
         )
 
         return try {

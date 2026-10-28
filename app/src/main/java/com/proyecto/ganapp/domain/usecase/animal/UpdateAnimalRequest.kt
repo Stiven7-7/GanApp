@@ -10,4 +10,5 @@ data class UpdateAnimalRequest(
     val peso: Float?,
     val color: String?,
     val fotoUri: String?,
+    val esFavorito: Boolean,
 )

@@ -73,6 +73,7 @@ class AnimalEditViewModelTest {
             peso = 10f,
             color = "Negro",
             fotoUri = "content://ajena",
+            esFavorito = true,
         )
         advanceUntilIdle()
 
@@ -113,6 +114,7 @@ class AnimalEditViewModelTest {
             peso = null,
             color = null,
             fotoUri = null,
+            esFavorito = false,
         )
         advanceUntilIdle()
 
@@ -136,6 +138,7 @@ class AnimalEditViewModelTest {
             peso = null,
             color = null,
             fotoUri = null,
+            esFavorito = false,
         )
         advanceUntilIdle()
 
@@ -162,6 +165,7 @@ class AnimalEditViewModelTest {
             peso = 80f,
             color = "Blanco",
             fotoUri = "content://ganapp/lola",
+            esFavorito = false,
         )
         advanceUntilIdle()
 
@@ -183,6 +187,7 @@ class AnimalEditViewModelTest {
             peso = 80f,
             color = "Blanco",
             fotoUri = "content://ganapp/lola",
+            esFavorito = false,
         )
         advanceUntilIdle()
 
@@ -196,6 +201,7 @@ class AnimalEditViewModelTest {
             peso = 10f,
             color = "Negro",
             fotoUri = "content://otra",
+            esFavorito = true,
         )
 
         assertEquals(1, repository.updateCalls)
@@ -207,6 +213,76 @@ class AnimalEditViewModelTest {
         assertEquals(1, repository.updateCalls)
     }
 
+    @Test
+    fun cargaFavoritoFalse_publicaReady() = runTest(mainDispatcherRule.testDispatcher) {
+        val animal = sample(esFavorito = false)
+        repository.stored = animal
+
+        viewModel.loadAnimal(animal.idAnimal)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as AnimalEditUiState.Ready
+        assertEquals(false, state.animal.esFavorito)
+    }
+
+    @Test
+    fun cargaFavoritoTrue_publicaReady() = runTest(mainDispatcherRule.testDispatcher) {
+        val animal = sample(esFavorito = true)
+        repository.stored = animal
+
+        viewModel.loadAnimal(animal.idAnimal)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as AnimalEditUiState.Ready
+        assertEquals(true, state.animal.esFavorito)
+    }
+
+    @Test
+    fun guardadoFavoritoFalseATrue_publicaSuccess() = runTest(mainDispatcherRule.testDispatcher) {
+        val animal = sample(esFavorito = false)
+        repository.stored = animal
+        viewModel.loadAnimal(animal.idAnimal)
+        advanceUntilIdle()
+
+        viewModel.saveAnimal(
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            edad = 2,
+            peso = 80f,
+            color = "Blanco",
+            fotoUri = "content://ganapp/lola",
+            esFavorito = true,
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as AnimalEditUiState.Success
+        assertEquals(true, state.animal.esFavorito)
+        assertEquals(true, repository.updated?.esFavorito)
+    }
+
+    @Test
+    fun guardadoFavoritoTrueAFalse_publicaSuccess() = runTest(mainDispatcherRule.testDispatcher) {
+        val animal = sample(esFavorito = true)
+        repository.stored = animal
+        viewModel.loadAnimal(animal.idAnimal)
+        advanceUntilIdle()
+
+        viewModel.saveAnimal(
+            especie = EspecieAnimal.VACA,
+            nombre = "Lola",
+            edad = 2,
+            peso = 80f,
+            color = "Blanco",
+            fotoUri = "content://ganapp/lola",
+            esFavorito = false,
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as AnimalEditUiState.Success
+        assertEquals(false, state.animal.esFavorito)
+        assertEquals(false, repository.updated?.esFavorito)
+    }
+
     private fun sample(
         especie: EspecieAnimal = EspecieAnimal.VACA,
         raza: String = "Holstein",
@@ -214,6 +290,7 @@ class AnimalEditViewModelTest {
         peso: Float? = 80f,
         color: String? = "Blanco",
         fotoUri: String? = "content://ganapp/lola",
+        esFavorito: Boolean = false,
     ) = Animal(
         idAnimal = 4L,
         especie = especie,
@@ -224,6 +301,7 @@ class AnimalEditViewModelTest {
         color = color,
         fotoUri = fotoUri,
         idUsuario = 7L,
+        esFavorito = esFavorito,
     )
 
     private class FakeAnimalRepository : AnimalRepository {

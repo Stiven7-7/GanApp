@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -197,6 +199,7 @@ private fun AnimalEditForm(
         peso: Float?,
         color: String?,
         fotoUri: String?,
+        esFavorito: Boolean,
     ) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -208,6 +211,7 @@ private fun AnimalEditForm(
     var peso by remember(animal.idAnimal) { mutableStateOf(formatEditableWeight(animal.peso)) }
     var color by remember(animal.idAnimal) { mutableStateOf(animal.color.orEmpty()) }
     var fotoUri by remember(animal.idAnimal) { mutableStateOf(animal.fotoUri) }
+    var esFavorito by remember(animal.idAnimal) { mutableStateOf(animal.esFavorito) }
     val originalEspecie = remember(animal.idAnimal) { animal.especie }
     var localEdadError by remember(animal.idAnimal) { mutableStateOf<String?>(null) }
     var localPesoError by remember(animal.idAnimal) { mutableStateOf<String?>(null) }
@@ -313,6 +317,23 @@ private fun AnimalEditForm(
             enabled = !saving,
             error = null,
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Favorito",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Switch(
+                checked = esFavorito,
+                onCheckedChange = { esFavorito = it },
+                enabled = !saving,
+            )
+        }
         if (saveMessage != null) {
             Text(
                 text = saveMessage,
@@ -330,7 +351,7 @@ private fun AnimalEditForm(
                 localEdadError = if (edadInvalida) "La edad no es válida." else null
                 localPesoError = if (pesoInvalido) "El peso no es válido." else null
                 if (edadInvalida || pesoInvalido) return@Button
-                onSave(especie, nombre, parsedEdad, parsedPeso, color, fotoUri)
+                onSave(especie, nombre, parsedEdad, parsedPeso, color, fotoUri, esFavorito)
             },
             enabled = !saving,
             modifier = Modifier

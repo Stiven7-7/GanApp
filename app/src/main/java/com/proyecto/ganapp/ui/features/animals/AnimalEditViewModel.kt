@@ -53,6 +53,7 @@ class AnimalEditViewModel @Inject constructor(
         peso: Float?,
         color: String?,
         fotoUri: String?,
+        esFavorito: Boolean,
     ) {
         val current = _uiState.value
         if (current is AnimalEditUiState.Saving) return
@@ -68,6 +69,7 @@ class AnimalEditViewModel @Inject constructor(
                     peso = peso,
                     color = color,
                     fotoUri = fotoUri,
+                    esFavorito = esFavorito,
                 ),
             )
             _uiState.value = when (result) {
