@@ -494,6 +494,8 @@ class AnimalsViewModelTest {
 
         override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
 
+        override fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
+
         override suspend fun getAnimalById(id: Long): Animal? = null
 
         override suspend fun insertAnimal(animal: Animal): Long {

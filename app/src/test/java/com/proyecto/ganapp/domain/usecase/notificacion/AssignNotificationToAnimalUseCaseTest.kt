@@ -186,6 +186,8 @@ private class AssignProbeAnimalRepository : AnimalRepository {
 
     override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> = error("Unexpected")
 
+    override fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>> = error("Unexpected")
+
     override suspend fun insertAnimal(animal: Animal): Long = error("Unexpected")
 
     override suspend fun updateAnimal(animal: Animal): Boolean = error("Unexpected")

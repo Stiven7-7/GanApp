@@ -1,14 +1,18 @@
 package com.proyecto.ganapp.ui.features.home
 
+import com.proyecto.ganapp.domain.model.Animal
+import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.model.Notificacion
 import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
 import com.proyecto.ganapp.domain.model.NotificationCancelResult
 import com.proyecto.ganapp.domain.model.NotificationScheduleResult
 import com.proyecto.ganapp.domain.model.Usuario
+import com.proyecto.ganapp.domain.repository.AnimalRepository
 import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
+import com.proyecto.ganapp.domain.usecase.animal.GetFavoriteAnimalsUseCase
 import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
 import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserNotificationAlarmsUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
@@ -19,6 +23,7 @@ import com.proyecto.ganapp.testutil.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -39,12 +44,16 @@ class HomeViewModelTest {
 
     private lateinit var usuarioRepository: FakeUsuarioRepository
     private lateinit var sessionRepository: FakeSessionRepository
+    private lateinit var favoriteSession: FavoriteSessionRepository
+    private lateinit var favoriteAnimals: FavoriteAnimalRepository
     private lateinit var viewModel: HomeViewModel
 
     @Before
     fun setUp() {
         usuarioRepository = FakeUsuarioRepository()
         sessionRepository = FakeSessionRepository()
+        favoriteSession = FavoriteSessionRepository()
+        favoriteAnimals = FavoriteAnimalRepository()
         viewModel = HomeViewModel(
             getUsuarioByIdUseCase = GetUsuarioByIdUseCase(usuarioRepository),
             logoutUseCase = LogoutUseCase(
@@ -57,6 +66,10 @@ class HomeViewModelTest {
                         ),
                     ),
                 clearSessionUseCase = ClearSessionUseCase(sessionRepository),
+            ),
+            getFavoriteAnimalsUseCase = GetFavoriteAnimalsUseCase(
+                animalRepository = favoriteAnimals,
+                sessionRepository = favoriteSession,
             ),
         )
     }
@@ -186,6 +199,136 @@ class HomeViewModelTest {
             assertEquals(usuario(id = 42L), loaded)
         }
 
+    @Test
+    fun favoritos_empiezanEnLoading() {
+        assertEquals(HomeFavoritesUiState.Loading, viewModel.favoritesUiState.value)
+    }
+
+    @Test
+    fun favoritosVacios_publicanSuccessVacio() = runTest(mainDispatcherRule.testDispatcher) {
+        advanceUntilIdle()
+
+        assertEquals(
+            HomeFavoritesUiState.Success(emptyList()),
+            viewModel.favoritesUiState.value,
+        )
+        assertTrue(favoriteAnimals.requestedUserIds.isEmpty())
+    }
+
+    @Test
+    fun unFavorito_publicaSuccess() = runTest(mainDispatcherRule.testDispatcher) {
+        val lola = favoriteAnimal(id = 4L, nombre = "Lola")
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.emit(7L, listOf(lola))
+
+        advanceUntilIdle()
+
+        assertEquals(HomeFavoritesUiState.Success(listOf(lola)), viewModel.favoritesUiState.value)
+    }
+
+    @Test
+    fun variosFavoritos_recibeLaListaCompletaOrdenada() = runTest(mainDispatcherRule.testDispatcher) {
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.emit(
+            7L,
+            listOf(
+                favoriteAnimal(id = 1L, nombre = "zeta"),
+                favoriteAnimal(id = 2L, nombre = "Ana"),
+                favoriteAnimal(id = 3L, nombre = "lola"),
+                favoriteAnimal(id = 4L, nombre = "Manolo"),
+                favoriteAnimal(id = 5L, nombre = "Nube"),
+                favoriteAnimal(id = 6L, nombre = "Bruno"),
+            ),
+        )
+
+        advanceUntilIdle()
+
+        val state = viewModel.favoritesUiState.value as HomeFavoritesUiState.Success
+        assertEquals(
+            listOf("Ana", "Bruno", "lola", "Manolo", "Nube", "zeta"),
+            state.animals.map { it.nombre },
+        )
+    }
+
+    @Test
+    fun nuevaEmision_actualizaFavoritosSinRecrearViewModel() = runTest(mainDispatcherRule.testDispatcher) {
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.emit(7L, listOf(favoriteAnimal(id = 1L, nombre = "Lola")))
+        advanceUntilIdle()
+
+        favoriteAnimals.emit(7L, listOf(favoriteAnimal(id = 2L, nombre = "Nube")))
+        advanceUntilIdle()
+
+        val state = viewModel.favoritesUiState.value as HomeFavoritesUiState.Success
+        assertEquals(listOf("Nube"), state.animals.map { it.nombre })
+    }
+
+    @Test
+    fun favoritoFalseATrue_yTrueAFalse() = runTest(mainDispatcherRule.testDispatcher) {
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.emit(7L, emptyList())
+        advanceUntilIdle()
+        assertEquals(HomeFavoritesUiState.Success(emptyList()), viewModel.favoritesUiState.value)
+
+        val lola = favoriteAnimal(id = 4L, nombre = "Lola")
+        favoriteAnimals.emit(7L, listOf(lola))
+        advanceUntilIdle()
+        assertEquals(HomeFavoritesUiState.Success(listOf(lola)), viewModel.favoritesUiState.value)
+
+        favoriteAnimals.emit(7L, emptyList())
+        advanceUntilIdle()
+        assertEquals(HomeFavoritesUiState.Success(emptyList()), viewModel.favoritesUiState.value)
+    }
+
+    @Test
+    fun errorDeFavoritos_noAfectaUsuarioNiLogout() = runTest(mainDispatcherRule.testDispatcher) {
+        val failure = IllegalStateException("db")
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.failure = failure
+        usuarioRepository.usersById[42L] = usuario(id = 42L)
+
+        viewModel.cargarUsuario(42L)
+        advanceUntilIdle()
+
+        val favorites = viewModel.favoritesUiState.value as HomeFavoritesUiState.Error
+        assertTrue(favorites.cause is IllegalStateException)
+        assertEquals("db", favorites.cause?.message)
+        assertEquals(usuario(id = 42L), viewModel.usuario.value)
+        assertFalse(viewModel.logoutUiState.value.isLoading)
+        assertNull(viewModel.logoutUiState.value.error)
+    }
+
+    @Test
+    fun cambioDeSesion_publicaFavoritosDelUsuarioActivo() = runTest(mainDispatcherRule.testDispatcher) {
+        favoriteSession.userIds.value = 7L
+        favoriteAnimals.emit(7L, listOf(favoriteAnimal(id = 1L, nombre = "Lola", owner = 7L)))
+        favoriteAnimals.emit(9L, listOf(favoriteAnimal(id = 2L, nombre = "Nube", owner = 9L)))
+        advanceUntilIdle()
+
+        favoriteSession.userIds.value = 9L
+        advanceUntilIdle()
+
+        val state = viewModel.favoritesUiState.value as HomeFavoritesUiState.Success
+        assertEquals(listOf("Nube"), state.animals.map { it.nombre })
+        assertEquals(listOf(7L, 9L), favoriteAnimals.requestedUserIds)
+    }
+
+    private fun favoriteAnimal(
+        id: Long,
+        nombre: String,
+        owner: Long = 7L,
+    ) = Animal(
+        idAnimal = id,
+        especie = EspecieAnimal.VACA,
+        nombre = nombre,
+        raza = "Holstein",
+        edad = 2,
+        peso = 80f,
+        color = "Blanco",
+        fotoUri = null,
+        idUsuario = owner,
+    )
+
     private fun usuario(id: Long): Usuario {
         return Usuario(
             idUsuario = id,
@@ -241,6 +384,44 @@ class HomeViewModelTest {
             clearGate?.await()
             clearException?.let { throw it }
         }
+    }
+
+    private class FavoriteSessionRepository : SessionRepository {
+        val userIds = MutableStateFlow<Long?>(null)
+
+        override fun observeAuthenticatedUserId(): Flow<Long?> = userIds
+
+        override suspend fun saveAuthenticatedUserId(userId: Long) = error("unused")
+
+        override suspend fun clearAuthenticatedUserId() = error("unused")
+    }
+
+    private class FavoriteAnimalRepository : AnimalRepository {
+        val requestedUserIds = mutableListOf<Long>()
+        val flows = mutableMapOf<Long, MutableStateFlow<List<Animal>>>()
+        var failure: Throwable? = null
+
+        fun emit(userId: Long, animals: List<Animal>) {
+            flows.getOrPut(userId) { MutableStateFlow(emptyList()) }.value = animals
+        }
+
+        override fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>> {
+            requestedUserIds += userId
+            failure?.let { error -> return flow { throw error } }
+            return flows.getOrPut(userId) { MutableStateFlow(emptyList()) }
+        }
+
+        override fun getAllAnimals(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
+
+        override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
+
+        override suspend fun getAnimalById(id: Long): Animal? = null
+
+        override suspend fun insertAnimal(animal: Animal): Long = error("unused")
+
+        override suspend fun updateAnimal(animal: Animal): Boolean = error("unused")
+
+        override suspend fun deleteAnimal(id: Long) = error("unused")
     }
 }
 

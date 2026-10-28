@@ -137,6 +137,8 @@ class GetAnimalByIdUseCaseTest {
 
         override fun getAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
 
+        override fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
+
         override suspend fun getAnimalById(id: Long): Animal? {
             requestedId = id
             error?.let { throw it }

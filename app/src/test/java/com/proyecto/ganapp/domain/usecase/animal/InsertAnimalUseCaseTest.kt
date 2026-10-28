@@ -310,6 +310,10 @@ class InsertAnimalUseCaseTest {
             error("Unexpected call to getAnimalsByUser")
         }
 
+        override fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>> {
+            error("Unexpected call to getFavoriteAnimalsByUser")
+        }
+
         override suspend fun getAnimalById(id: Long): Animal? {
             error("Unexpected call to getAnimalById")
         }

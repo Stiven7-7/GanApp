@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface AnimalRepository {
     fun getAllAnimals(userId: Long): Flow<List<Animal>>
     fun getAnimalsByUser(userId: Long): Flow<List<Animal>>
+    fun getFavoriteAnimalsByUser(userId: Long): Flow<List<Animal>>
     suspend fun getAnimalById(id: Long): Animal?
     suspend fun insertAnimal(animal: Animal): Long
     suspend fun updateAnimal(animal: Animal): Boolean
