@@ -1,7 +1,7 @@
 package com.proyecto.ganapp.ui.features.home
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,11 +21,11 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,16 +46,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.proyecto.ganapp.R
+import coil.compose.AsyncImage
+import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
+import com.proyecto.ganapp.ui.features.animals.AnimalSpeciesChip
+import com.proyecto.ganapp.ui.features.animals.buildAnimalCardMetadata
+import com.proyecto.ganapp.ui.features.animals.getAnimalImageRes
 
 @Composable
 fun HomeScreen(
@@ -67,6 +72,7 @@ fun HomeScreen(
 ) {
     val usuario by viewModel.usuario.collectAsState()
     val logoutUiState by viewModel.logoutUiState.collectAsState()
+    val favoritesUiState by viewModel.favoritesUiState.collectAsState()
 
     LaunchedEffect(idUsuario) {
         viewModel.cargarUsuario(idUsuario)
@@ -123,31 +129,201 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
 
+            HomeFavoritesSection(state = favoritesUiState)
+
+            Spacer(modifier = Modifier.height(GanAppSpacing.xl))
+        }
+    }
+}
+
+@Composable
+private fun HomeFavoritesSection(state: HomeFavoritesUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.md)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Text(
-                text = "Accesos",
+                text = "Mis animales favoritos",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
+        }
+        when (state) {
+            HomeFavoritesUiState.Loading -> HomeFavoritesLoading()
+            is HomeFavoritesUiState.Success -> {
+                if (state.animals.isEmpty()) {
+                    HomeFavoritesEmpty()
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+                        state.animals.forEach { animal ->
+                            HomeFavoriteCard(animal = animal)
+                        }
+                    }
+                }
+            }
+            is HomeFavoritesUiState.Error -> HomeFavoritesError()
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(GanAppSpacing.md))
+@Composable
+private fun HomeFavoritesLoading() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = GanAppSpacing.lg),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(GanAppSpacing.xl),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 2.dp,
+        )
+    }
+}
 
-            HomeDestinationRow(
-                title = "Animales",
-                subtitle = "Consulta tus animales registrados",
-                iconRes = R.drawable.def_vaca,
-                onClick = onVerAnimales,
-            )
+@Composable
+private fun HomeFavoritesEmpty() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = GanAppSpacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Star,
+            contentDescription = null,
+            modifier = Modifier.size(GanAppSpacing.xl),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Aún no tienes animales favoritos",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Puedes marcar un animal como favorito desde Editar animal.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(GanAppSpacing.md))
+@Composable
+private fun HomeFavoritesError() {
+    Text(
+        text = "No fue posible cargar tus animales favoritos.",
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(GanAppSpacing.md),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onErrorContainer,
+    )
+}
 
-            HomeDestinationRow(
-                title = "Notificaciones",
-                subtitle = "Consulta y gestiona recordatorios",
-                icon = Icons.Outlined.Notifications,
-                onClick = onNotificaciones,
-            )
+@Composable
+private fun HomeFavoriteCard(animal: Animal) {
+    val metadata = buildAnimalCardMetadata(animal)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(GanAppSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
+            verticalAlignment = Alignment.Top,
+        ) {
+            HomeFavoritePhoto(animal = animal)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+            ) {
+                Text(
+                    text = animal.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                AnimalSpeciesChip(especie = animal.especie)
+                if (metadata?.lineOne != null) {
+                    Text(
+                        text = metadata.lineOne,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (metadata?.lineTwo != null) {
+                    Text(
+                        text = metadata.lineTwo,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = "Favorito",
+                    modifier = Modifier
+                        .padding(GanAppSpacing.xxs)
+                        .size(GanAppSpacing.md),
+                )
+            }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(GanAppSpacing.xl))
+@Composable
+private fun HomeFavoritePhoto(animal: Animal) {
+    val uri = animal.fotoUri
+    var photoFailed by remember(uri) { mutableStateOf(false) }
+    val modifier = Modifier
+        .size(80.dp)
+        .clip(MaterialTheme.shapes.medium)
+    if (!uri.isNullOrBlank() && !photoFailed) {
+        AsyncImage(
+            model = uri,
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
+            onError = { photoFailed = true },
+        )
+    } else {
+        val imageRes = getAnimalImageRes(animal.especie)
+        Surface(
+            modifier = modifier,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (imageRes != null) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(GanAppSpacing.xxl),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+            }
         }
     }
 }
@@ -246,69 +422,6 @@ private fun HomeAccountMenu(
                 },
                 enabled = !isLoading,
                 onClick = onLogout,
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeDestinationRow(
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    icon: ImageVector? = null,
-    @DrawableRes iconRes: Int? = null,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = GanAppSpacing.xxl),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(GanAppSpacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
-        ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            } else if (iconRes != null) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
