@@ -31,7 +31,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -68,6 +70,8 @@ fun HomeScreen(
     onRegistrarAnimal: () -> Unit,
     onVerAnimales: () -> Unit,
     onNotificaciones: () -> Unit,
+    onAssignNotification: (Long) -> Unit,
+    onViewNotifications: (Long) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val usuario by viewModel.usuario.collectAsState()
@@ -129,7 +133,11 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
 
-            HomeFavoritesSection(state = favoritesUiState)
+            HomeFavoritesSection(
+                state = favoritesUiState,
+                onAssignNotification = onAssignNotification,
+                onViewNotifications = onViewNotifications,
+            )
 
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
         }
@@ -137,7 +145,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeFavoritesSection(state: HomeFavoritesUiState) {
+private fun HomeFavoritesSection(
+    state: HomeFavoritesUiState,
+    onAssignNotification: (Long) -> Unit,
+    onViewNotifications: (Long) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.md)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -162,7 +174,11 @@ private fun HomeFavoritesSection(state: HomeFavoritesUiState) {
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
                         state.animals.forEach { animal ->
-                            HomeFavoriteCard(animal = animal)
+                            HomeFavoriteCard(
+                                animal = animal,
+                                onAssignNotification = onAssignNotification,
+                                onViewNotifications = onViewNotifications,
+                            )
                         }
                     }
                 }
@@ -231,7 +247,11 @@ private fun HomeFavoritesError() {
 }
 
 @Composable
-private fun HomeFavoriteCard(animal: Animal) {
+private fun HomeFavoriteCard(
+    animal: Animal,
+    onAssignNotification: (Long) -> Unit,
+    onViewNotifications: (Long) -> Unit,
+) {
     val metadata = buildAnimalCardMetadata(animal)
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -273,6 +293,22 @@ private fun HomeFavoriteCard(animal: Animal) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                FilledTonalButton(
+                    onClick = { onAssignNotification(animal.idAnimal) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = GanAppSpacing.xxl),
+                ) {
+                    Text("Asignar")
+                }
+                OutlinedButton(
+                    onClick = { onViewNotifications(animal.idAnimal) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = GanAppSpacing.xxl),
+                ) {
+                    Text("Notificaciones")
                 }
             }
             Surface(

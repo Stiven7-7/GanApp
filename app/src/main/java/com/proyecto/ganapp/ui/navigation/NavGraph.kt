@@ -212,6 +212,12 @@ private fun AppNavGraph(
                 onRegistrarAnimal = { navController.navigate("register_animal/$userId") },
                 onVerAnimales = { navigateTopLevel(GanAppTopLevelDestination.Animals) },
                 onNotificaciones = { navigateTopLevel(GanAppTopLevelDestination.Notifications) },
+                onAssignNotification = { animalId ->
+                    navController.navigate("assignNotification/$userId/$animalId")
+                },
+                onViewNotifications = { animalId ->
+                    navController.navigate("animalNotifications/$animalId")
+                },
             )
         }
 
