@@ -3,9 +3,10 @@ package com.proyecto.ganapp.ui.features.animals
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +39,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -138,41 +144,29 @@ fun AnimalsScreen(
             AnimalsListUiState.NoResults,
             is AnimalsListUiState.Success,
             -> {
-                Column(
+                AnimalsDiscoveryList(
+                    animals = (state as? AnimalsListUiState.Success)?.animals,
+                    onAnimalClick = onAnimalClick,
+                    onAssignNotification = onAssignNotification,
+                    onViewNotifications = onViewNotifications,
                     modifier = Modifier
                         .padding(padding)
                         .fillMaxSize(),
-                ) {
-                    AnimalsSearchAndFilters(
-                        searchQuery = searchQuery,
-                        speciesFilter = speciesFilter,
-                        onSearchQueryChange = viewModel::updateSearchQuery,
-                        onSpeciesFilterChange = viewModel::updateSpeciesFilter,
-                    )
-                    if (state is AnimalsListUiState.Success) {
-                        AnimalsLoadedList(
-                            animals = state.animals,
-                            onAnimalClick = onAnimalClick,
-                            onAssignNotification = onAssignNotification,
-                            onViewNotifications = onViewNotifications,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
+                    header = {
+                        AnimalsSearchAndFilters(
+                            searchQuery = searchQuery,
+                            speciesFilter = speciesFilter,
+                            onSearchQueryChange = viewModel::updateSearchQuery,
+                            onSpeciesFilterChange = viewModel::updateSpeciesFilter,
                         )
-                    } else {
-                        AnimalsNoResultsState(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                        )
-                    }
-                }
+                    },
+                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AnimalsSearchAndFilters(
     searchQuery: String,
@@ -181,13 +175,7 @@ private fun AnimalsSearchAndFilters(
     onSpeciesFilterChange: (AnimalSpeciesFilter) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = GanAppSpacing.md,
-                top = GanAppSpacing.md,
-                end = GanAppSpacing.md,
-            ),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
     ) {
         OutlinedTextField(
@@ -196,12 +184,30 @@ private fun AnimalsSearchAndFilters(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Buscar por nombre") },
             singleLine = true,
+            shape = MaterialTheme.shapes.medium,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = null,
+                )
+            },
+            trailingIcon = if (searchQuery.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Clear,
+                            contentDescription = "Limpiar búsqueda",
+                        )
+                    }
+                }
+            } else {
+                null
+            },
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
         ) {
             AnimalSpeciesFilterChip(
                 label = "Todos",
@@ -238,48 +244,55 @@ private fun AnimalSpeciesFilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(label) },
+        modifier = Modifier.heightIn(min = 48.dp),
     )
 }
 
 @Composable
-private fun AnimalsLoadedList(
-    animals: List<Animal>,
+private fun AnimalsDiscoveryList(
+    animals: List<Animal>?,
     onAnimalClick: (Long) -> Unit,
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit,
+    header: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val fabClearance = GanAppSpacing.xxl + GanAppSpacing.lg
     BoxWithConstraints(modifier = modifier) {
-                    val narrow = maxWidth < 360.dp
-                    val highScale = LocalDensity.current.fontScale >= 1.5f
-                    val reserveFabColumn = narrow && !highScale
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = GanAppSpacing.md,
-                            top = GanAppSpacing.md,
-                            end = if (narrow) {
-                                GanAppSpacing.xxl + GanAppSpacing.md
-                            } else {
-                                GanAppSpacing.md
-                            },
-                            bottom = if (reserveFabColumn) GanAppSpacing.md else fabClearance,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
-                    ) {
-                        items(
-                            items = animals,
-                            key = { animal -> animal.idAnimal },
-                        ) { animal ->
-                            AnimalCard(
-                                animal = animal,
-                                onAnimalClick = onAnimalClick,
-                                onAssignNotification = onAssignNotification,
-                                onViewNotifications = onViewNotifications,
-                            )
-                        }
-                    }
+        val narrow = maxWidth < 360.dp
+        val highScale = LocalDensity.current.fontScale >= 1.5f
+        val reserveFabColumn = narrow && !highScale
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = GanAppSpacing.md,
+                top = GanAppSpacing.md,
+                end = if (narrow) {
+                    GanAppSpacing.xxl + GanAppSpacing.md
+                } else {
+                    GanAppSpacing.md
+                },
+                bottom = if (reserveFabColumn) GanAppSpacing.md else fabClearance,
+            ),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        ) {
+            item { header() }
+            if (animals != null) {
+                items(
+                    items = animals,
+                    key = { animal -> animal.idAnimal },
+                ) { animal ->
+                    AnimalCard(
+                        animal = animal,
+                        onAnimalClick = onAnimalClick,
+                        onAssignNotification = onAssignNotification,
+                        onViewNotifications = onViewNotifications,
+                    )
+                }
+            } else {
+                item { AnimalsNoResultsState() }
+            }
+        }
     }
 }
 
@@ -290,6 +303,13 @@ private fun AnimalsNoResultsState(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        Icon(
+            imageVector = Icons.Outlined.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(GanAppSpacing.xl),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(GanAppSpacing.sm))
         Text(
             text = "No se encontraron animales.",
             style = MaterialTheme.typography.titleMedium,
@@ -423,6 +443,9 @@ private fun AnimalCardIdentity(
             AnimalSpeciesChip(especie = animal.especie)
             AnimalCardMetadataLines(metadata)
         }
+        if (animal.esFavorito) {
+            AnimalFavoriteIndicator()
+        }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
@@ -457,6 +480,9 @@ private fun AnimalCardIdentityCompact(
                 nombre = animal.nombre,
                 modifier = Modifier.weight(1f),
             )
+            if (animal.esFavorito) {
+                AnimalFavoriteIndicator()
+            }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -465,6 +491,23 @@ private fun AnimalCardIdentityCompact(
         }
         AnimalSpeciesChip(especie = animal.especie)
         AnimalCardMetadataLines(metadata)
+    }
+}
+
+@Composable
+private fun AnimalFavoriteIndicator() {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Star,
+            contentDescription = "Favorito",
+            modifier = Modifier
+                .padding(GanAppSpacing.xxs)
+                .size(GanAppSpacing.md),
+        )
     }
 }
 
