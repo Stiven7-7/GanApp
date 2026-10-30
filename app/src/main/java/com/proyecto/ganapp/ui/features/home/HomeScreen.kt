@@ -5,7 +5,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,23 +23,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.error
@@ -59,10 +67,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.proyecto.ganapp.domain.model.Animal
+import com.proyecto.ganapp.ui.common.theme.Favorite
+import com.proyecto.ganapp.ui.common.theme.FavoriteContainer
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
+import com.proyecto.ganapp.ui.common.theme.OnFavoriteContainer
 import com.proyecto.ganapp.ui.features.animals.AnimalSpeciesChip
-import com.proyecto.ganapp.ui.features.animals.buildAnimalCardMetadata
 import com.proyecto.ganapp.ui.features.animals.getAnimalImageRes
+import com.proyecto.ganapp.ui.features.animals.shouldShowBreed
 
 @Composable
 fun HomeScreen(
@@ -109,27 +120,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
 
-            Button(
-                onClick = onRegistrarAnimal,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = null,
-                )
-                Spacer(modifier = Modifier.width(GanAppSpacing.xs))
-                Text(
-                    text = "Registrar animal",
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            HomeRegisterAnimalAction(onClick = onRegistrarAnimal)
 
             Spacer(modifier = Modifier.height(GanAppSpacing.xl))
 
@@ -153,13 +144,23 @@ private fun HomeFavoritesSection(
     Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.md)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Surface(
+                modifier = Modifier.size(GanAppSpacing.xl),
+                shape = MaterialTheme.shapes.small,
+                color = FavoriteContainer,
+                contentColor = OnFavoriteContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = Favorite,
+                    )
+                }
+            }
             Text(
                 text = "Mis animales favoritos",
                 style = MaterialTheme.typography.titleLarge,
@@ -217,7 +218,7 @@ private fun HomeFavoritesEmpty() {
             imageVector = Icons.Outlined.Star,
             contentDescription = null,
             modifier = Modifier.size(GanAppSpacing.xl),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = Favorite,
         )
         Text(
             text = "Aún no tienes animales favoritos",
@@ -252,7 +253,6 @@ private fun HomeFavoriteCard(
     onAssignNotification: (Long) -> Unit,
     onViewNotifications: (Long) -> Unit,
 ) {
-    val metadata = buildAnimalCardMetadata(animal)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -262,69 +262,181 @@ private fun HomeFavoriteCard(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
     ) {
-        Row(
-            modifier = Modifier.padding(GanAppSpacing.md),
-            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
-            verticalAlignment = Alignment.Top,
-        ) {
-            HomeFavoritePhoto(animal = animal)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        Column {
+            Row(
+                modifier = Modifier.padding(GanAppSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
+                verticalAlignment = Alignment.Top,
             ) {
-                Text(
-                    text = animal.nombre,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                AnimalSpeciesChip(especie = animal.especie)
-                if (metadata?.lineOne != null) {
-                    Text(
-                        text = metadata.lineOne,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Box(modifier = Modifier.align(Alignment.CenterVertically)) {
+                    HomeFavoritePhoto(animal = animal)
                 }
-                if (metadata?.lineTwo != null) {
-                    Text(
-                        text = metadata.lineTwo,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { onAssignNotification(animal.idAnimal) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = GanAppSpacing.xxl),
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
                 ) {
-                    Text("Asignar")
+                    HomeFavoriteIdentity(animal = animal)
+                    HomeFavoriteMetadata(animal = animal)
                 }
-                OutlinedButton(
-                    onClick = { onViewNotifications(animal.idAnimal) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = GanAppSpacing.xxl),
-                ) {
-                    Text("Notificaciones")
-                }
+                HomeFavoriteMark()
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HomeFavoriteActions(
+                onAssign = { onAssignNotification(animal.idAnimal) },
+                onViewNotifications = { onViewNotifications(animal.idAnimal) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeFavoriteMark() {
+    Surface(
+        modifier = Modifier.size(36.dp),
+        shape = CircleShape,
+        color = FavoriteContainer,
+        contentColor = OnFavoriteContainer,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = "Favorito",
+                modifier = Modifier.size(20.dp),
+                tint = Favorite,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HomeFavoriteIdentity(animal: Animal) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+    ) {
+        Text(
+            text = animal.nombre,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        AnimalSpeciesChip(especie = animal.especie)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HomeFavoriteMetadata(animal: Animal) {
+    val chips = buildList {
+        animal.edad?.let { edad -> add(formatHomeFavoriteAge(edad)) }
+        animal.peso?.let { peso -> add("$peso kg") }
+        animal.color?.takeIf { it.isNotBlank() }?.let { color -> add("Color $color") }
+        if (shouldShowBreed(animal.raza)) {
+            add("Raza ${animal.raza}")
+        }
+    }
+    if (chips.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+    ) {
+        chips.forEach { label ->
             Surface(
                 shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = "Favorito",
-                    modifier = Modifier
-                        .padding(GanAppSpacing.xxs)
-                        .size(GanAppSpacing.md),
+                Text(
+                    text = label,
+                    modifier = Modifier.padding(
+                        horizontal = GanAppSpacing.xs,
+                        vertical = GanAppSpacing.xxs,
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HomeFavoriteActions(
+    onAssign: () -> Unit,
+    onViewNotifications: () -> Unit,
+) {
+    val actionPadding = PaddingValues(
+        horizontal = GanAppSpacing.md,
+        vertical = GanAppSpacing.xs,
+    )
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(GanAppSpacing.md),
+    ) {
+        val stackActions = maxWidth < 320.dp || LocalDensity.current.fontScale >= 1.5f
+        if (stackActions) {
+            Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+                HomeAssignAction(
+                    onClick = onAssign,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = actionPadding,
+                )
+                HomeNotificationsAction(
+                    onClick = onViewNotifications,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = actionPadding,
+                )
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+                HomeAssignAction(
+                    onClick = onAssign,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = actionPadding,
+                )
+                HomeNotificationsAction(
+                    onClick = onViewNotifications,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = actionPadding,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeAssignAction(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    contentPadding: PaddingValues,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = GanAppSpacing.xxl),
+        contentPadding = contentPadding,
+    ) {
+        Text(text = "Asignar")
+    }
+}
+
+@Composable
+private fun HomeNotificationsAction(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    contentPadding: PaddingValues,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = GanAppSpacing.xxl),
+        contentPadding = contentPadding,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.primary,
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+    ) {
+        Text(text = "Notificaciones")
     }
 }
 
@@ -333,7 +445,7 @@ private fun HomeFavoritePhoto(animal: Animal) {
     val uri = animal.fotoUri
     var photoFailed by remember(uri) { mutableStateOf(false) }
     val modifier = Modifier
-        .size(80.dp)
+        .size(72.dp)
         .clip(MaterialTheme.shapes.medium)
     if (!uri.isNullOrBlank() && !photoFailed) {
         AsyncImage(
@@ -370,6 +482,7 @@ private fun HomeHeader(
     logoutUiState: HomeLogoutUiState,
     onLogout: () -> Unit,
 ) {
+    val saludo = if (!nombre.isNullOrBlank()) "¡Hola, $nombre!" else "¡Hola!"
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -383,27 +496,85 @@ private fun HomeHeader(
                 .fillMaxWidth()
                 .padding(GanAppSpacing.md),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Bienvenido",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                if (!nombre.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(GanAppSpacing.xxs))
-                    Text(
-                        text = nombre,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+            Surface(
+                modifier = Modifier.size(GanAppSpacing.xxl),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(GanAppSpacing.xl),
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(GanAppSpacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = saludo,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = "Listo para trabajar en el campo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
             HomeAccountMenu(
                 isLoading = logoutUiState.isLoading,
                 hasError = logoutUiState.error == HomeLogoutError.UNEXPECTED,
                 onLogout = onLogout,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeRegisterAnimalAction(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .semantics(mergeDescendants = true) {},
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = GanAppSpacing.md,
+                vertical = GanAppSpacing.sm,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.16f),
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                    )
+                }
+            }
+            Text(
+                text = "Registrar nuevo animal",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
             )
         }
     }
@@ -422,15 +593,22 @@ private fun HomeAccountMenu(
     }
 
     Box {
-        IconButton(
-            onClick = { expanded = true },
+        Surface(
             modifier = Modifier.size(GanAppSpacing.xxl),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ) {
-            Icon(
-                imageVector = Icons.Outlined.AccountCircle,
-                contentDescription = "Cuenta",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            IconButton(
+                onClick = { expanded = true },
+                modifier = Modifier.size(GanAppSpacing.xxl),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = "Cuenta",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
         DropdownMenu(
             expanded = expanded,
@@ -494,4 +672,8 @@ private fun HomeLogoutErrorBanner() {
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
+}
+
+private fun formatHomeFavoriteAge(edad: Int): String {
+    return if (edad == 1) "1 año" else "$edad años"
 }

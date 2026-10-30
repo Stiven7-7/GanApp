@@ -24,3 +24,12 @@ val DisabledContent = Color(0xFF697069)
 
 /** Contenedor deshabilitado. No es un rol de [androidx.compose.material3.ColorScheme]. */
 val DisabledContainer = Color(0xFFE1E5E0)
+
+/** Acento de favorito. No es un rol de [androidx.compose.material3.ColorScheme]. */
+val Favorite = Color(0xFFB26A00)
+
+/** Contenedor de favorito. No es un rol de [androidx.compose.material3.ColorScheme]. */
+val FavoriteContainer = Color(0xFFFFF0C2)
+
+/** Contenido sobre el contenedor de favorito. No es un rol de [androidx.compose.material3.ColorScheme]. */
+val OnFavoriteContainer = Color(0xFF3F2A00)
