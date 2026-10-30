@@ -411,6 +411,203 @@ class AnimalsViewModelTest {
     }
 
     @Test
+    fun listaVacia_speciesCountsEnCero() = runTest(mainDispatcherRule.testDispatcher) {
+        viewModel.loadAnimals(15L)
+        advanceUntilIdle()
+
+        assertEquals(AnimalSpeciesCounts(), viewModel.speciesCounts.value)
+        assertEquals(AnimalsListUiState.Empty, viewModel.listUiState.value)
+    }
+
+    @Test
+    fun unaPorEspecie_speciesCountsUnoDeCada() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        assertEquals(
+            AnimalSpeciesCounts(total = 3, vacas = 1, cerdos = 1, ovejas = 1),
+            viewModel.speciesCounts.value,
+        )
+    }
+
+    @Test
+    fun sinEspecificar_soloCuentaEnTotal() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        assertEquals(
+            AnimalSpeciesCounts(total = 2, vacas = 1, cerdos = 0, ovejas = 0),
+            viewModel.speciesCounts.value,
+        )
+    }
+
+    @Test
+    fun multiplesMismaEspecie_speciesCountsAcumulan() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.VACA, nombre = "Manolo"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.VACA, nombre = "Canela"),
+            sampleAnimal(id = 4L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        assertEquals(
+            AnimalSpeciesCounts(total = 4, vacas = 3, cerdos = 1, ovejas = 0),
+            viewModel.speciesCounts.value,
+        )
+    }
+
+    @Test
+    fun searchNoAlteraSpeciesCounts() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Mancha"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+            sampleAnimal(id = 4L, especie = EspecieAnimal.VACA, nombre = "Canela"),
+            sampleAnimal(id = 5L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        val counts = viewModel.speciesCounts.value
+        assertEquals(
+            AnimalSpeciesCounts(total = 5, vacas = 2, cerdos = 1, ovejas = 1),
+            counts,
+        )
+
+        viewModel.updateSearchQuery("Mancha")
+
+        assertEquals(listOf("Mancha"), visibleNames())
+        assertEquals(counts, viewModel.speciesCounts.value)
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun speciesFilterNoAlteraSpeciesCounts() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.VACA, nombre = "Canela"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+            sampleAnimal(id = 4L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+            sampleAnimal(id = 5L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        val counts = AnimalSpeciesCounts(total = 5, vacas = 2, cerdos = 1, ovejas = 1)
+        assertEquals(counts, viewModel.speciesCounts.value)
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+        assertEquals(listOf(EspecieAnimal.VACA, EspecieAnimal.VACA), visibleSpecies())
+        assertEquals(counts, viewModel.speciesCounts.value)
+
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.CERDO)
+        assertEquals(listOf(EspecieAnimal.CERDO), visibleSpecies())
+        assertEquals(counts, viewModel.speciesCounts.value)
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun nuevaEmision_actualizaSpeciesCountsYConservaFiltros() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        assertEquals(
+            AnimalSpeciesCounts(total = 1, vacas = 1, cerdos = 0, ovejas = 0),
+            viewModel.speciesCounts.value,
+        )
+
+        viewModel.updateSearchQuery("lo")
+        viewModel.updateSpeciesFilter(AnimalSpeciesFilter.VACA)
+
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.VACA, nombre = "Manolo"),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+            sampleAnimal(id = 4L, especie = EspecieAnimal.OVEJA, nombre = "Nube"),
+            sampleAnimal(id = 5L, especie = EspecieAnimal.SIN_ESPECIFICAR, nombre = "Histórico"),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            AnimalSpeciesCounts(total = 5, vacas = 2, cerdos = 1, ovejas = 1),
+            viewModel.speciesCounts.value,
+        )
+        assertEquals("lo", viewModel.searchQuery.value)
+        assertEquals(AnimalSpeciesFilter.VACA, viewModel.speciesFilter.value)
+        assertEquals(
+            listOf("Lola" to EspecieAnimal.VACA, "Manolo" to EspecieAnimal.VACA),
+            visibleIdentity(),
+        )
+        assertEquals(1, repository.getAllAnimalsCalls)
+    }
+
+    @Test
+    fun favoritoNoAlteraSpeciesCounts() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola", esFavorito = true),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.VACA, nombre = "Canela", esFavorito = false),
+            sampleAnimal(id = 3L, especie = EspecieAnimal.CERDO, nombre = "Rosado", esFavorito = true),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        assertEquals(
+            AnimalSpeciesCounts(total = 3, vacas = 2, cerdos = 1, ovejas = 0),
+            viewModel.speciesCounts.value,
+        )
+    }
+
+    @Test
+    fun emisionPosteriorVacia_reseteaSpeciesCounts() = runTest(mainDispatcherRule.testDispatcher) {
+        repository.animals = listOf(
+            sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+            sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+        )
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+        assertTrue(viewModel.speciesCounts.value.total > 0)
+
+        repository.animals = emptyList()
+        advanceUntilIdle()
+
+        assertEquals(AnimalSpeciesCounts(), viewModel.speciesCounts.value)
+        assertEquals(AnimalsListUiState.Empty, viewModel.listUiState.value)
+    }
+
+    @Test
+    fun emisionPosteriorFallida_conservaSpeciesCounts() = runTest(mainDispatcherRule.testDispatcher) {
+        val failure = IllegalStateException("db")
+        repository.animalsFlow = flow {
+            emit(
+                listOf(
+                    sampleAnimal(id = 1L, especie = EspecieAnimal.VACA, nombre = "Lola"),
+                    sampleAnimal(id = 2L, especie = EspecieAnimal.CERDO, nombre = "Rosado"),
+                ),
+            )
+            throw failure
+        }
+        viewModel.loadAnimals(7L)
+        advanceUntilIdle()
+
+        assertEquals(AnimalsListUiState.Error(failure), viewModel.listUiState.value)
+        assertEquals(
+            AnimalSpeciesCounts(total = 2, vacas = 1, cerdos = 1, ovejas = 0),
+            viewModel.speciesCounts.value,
+        )
+    }
+
+    @Test
     fun listaFuenteVaciaConFiltros_sigueEnEmpty() = runTest(mainDispatcherRule.testDispatcher) {
         viewModel.loadAnimals(7L)
         advanceUntilIdle()

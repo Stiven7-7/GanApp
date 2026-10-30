@@ -22,3 +22,10 @@ sealed interface AnimalsListUiState {
         val cause: Throwable? = null,
     ) : AnimalsListUiState
 }
+
+data class AnimalSpeciesCounts(
+    val total: Int = 0,
+    val vacas: Int = 0,
+    val cerdos: Int = 0,
+    val ovejas: Int = 0,
+)

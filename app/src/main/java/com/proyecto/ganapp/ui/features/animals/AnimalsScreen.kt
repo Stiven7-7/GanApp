@@ -3,9 +3,9 @@ package com.proyecto.ganapp.ui.features.animals
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,9 +35,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +71,8 @@ import com.proyecto.ganapp.R
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
+import com.proyecto.ganapp.ui.common.theme.Favorite
+import com.proyecto.ganapp.ui.common.theme.FavoriteContainer
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +88,7 @@ fun AnimalsScreen(
     val listState by viewModel.listUiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val speciesFilter by viewModel.speciesFilter.collectAsState()
+    val speciesCounts by viewModel.speciesCounts.collectAsState()
 
     LaunchedEffect(userId) {
         viewModel.loadAnimals(userId)
@@ -98,16 +103,21 @@ fun AnimalsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
+                text = { Text("Agregar animal") },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                    )
+                },
                 onClick = onAddAnimal,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Agregar animal",
-                )
-            }
+                modifier = Modifier.semantics {
+                    contentDescription = "Agregar animal"
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
         }
     ) { padding ->
         when (val state = listState) {
@@ -156,6 +166,7 @@ fun AnimalsScreen(
                         AnimalsSearchAndFilters(
                             searchQuery = searchQuery,
                             speciesFilter = speciesFilter,
+                            speciesCounts = speciesCounts,
                             onSearchQueryChange = viewModel::updateSearchQuery,
                             onSpeciesFilterChange = viewModel::updateSpeciesFilter,
                         )
@@ -166,11 +177,12 @@ fun AnimalsScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AnimalsSearchAndFilters(
     searchQuery: String,
     speciesFilter: AnimalSpeciesFilter,
+    speciesCounts: AnimalSpeciesCounts,
     onSearchQueryChange: (String) -> Unit,
     onSpeciesFilterChange: (AnimalSpeciesFilter) -> Unit,
 ) {
@@ -204,28 +216,33 @@ private fun AnimalsSearchAndFilters(
                 null
             },
         )
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
-            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
         ) {
             AnimalSpeciesFilterChip(
                 label = "Todos",
+                count = speciesCounts.total,
                 selected = speciesFilter == AnimalSpeciesFilter.ALL,
                 onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.ALL) },
             )
             AnimalSpeciesFilterChip(
                 label = "Vacas",
+                count = speciesCounts.vacas,
                 selected = speciesFilter == AnimalSpeciesFilter.VACA,
                 onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.VACA) },
             )
             AnimalSpeciesFilterChip(
                 label = "Cerdos",
+                count = speciesCounts.cerdos,
                 selected = speciesFilter == AnimalSpeciesFilter.CERDO,
                 onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.CERDO) },
             )
             AnimalSpeciesFilterChip(
                 label = "Ovejas",
+                count = speciesCounts.ovejas,
                 selected = speciesFilter == AnimalSpeciesFilter.OVEJA,
                 onClick = { onSpeciesFilterChange(AnimalSpeciesFilter.OVEJA) },
             )
@@ -237,14 +254,34 @@ private fun AnimalsSearchAndFilters(
 @Composable
 private fun AnimalSpeciesFilterChip(
     label: String,
+    count: Int,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label) },
-        modifier = Modifier.heightIn(min = 48.dp),
+        label = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = label)
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .semantics(mergeDescendants = true) {},
     )
 }
 
@@ -257,41 +294,32 @@ private fun AnimalsDiscoveryList(
     header: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val fabClearance = GanAppSpacing.xxl + GanAppSpacing.lg
-    BoxWithConstraints(modifier = modifier) {
-        val narrow = maxWidth < 360.dp
-        val highScale = LocalDensity.current.fontScale >= 1.5f
-        val reserveFabColumn = narrow && !highScale
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = GanAppSpacing.md,
-                top = GanAppSpacing.md,
-                end = if (narrow) {
-                    GanAppSpacing.xxl + GanAppSpacing.md
-                } else {
-                    GanAppSpacing.md
-                },
-                bottom = if (reserveFabColumn) GanAppSpacing.md else fabClearance,
-            ),
-            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
-        ) {
-            item { header() }
-            if (animals != null) {
-                items(
-                    items = animals,
-                    key = { animal -> animal.idAnimal },
-                ) { animal ->
-                    AnimalCard(
-                        animal = animal,
-                        onAnimalClick = onAnimalClick,
-                        onAssignNotification = onAssignNotification,
-                        onViewNotifications = onViewNotifications,
-                    )
-                }
-            } else {
-                item { AnimalsNoResultsState() }
+    val fabClearance = 56.dp + GanAppSpacing.md + GanAppSpacing.sm
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = GanAppSpacing.md,
+            top = GanAppSpacing.md,
+            end = GanAppSpacing.md,
+            bottom = fabClearance,
+        ),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+    ) {
+        item { header() }
+        if (animals != null) {
+            items(
+                items = animals,
+                key = { animal -> animal.idAnimal },
+            ) { animal ->
+                AnimalCard(
+                    animal = animal,
+                    onAnimalClick = onAnimalClick,
+                    onAssignNotification = onAssignNotification,
+                    onViewNotifications = onViewNotifications,
+                )
             }
+        } else {
+            item { AnimalsNoResultsState() }
         }
     }
 }
@@ -498,8 +526,8 @@ private fun AnimalCardIdentityCompact(
 private fun AnimalFavoriteIndicator() {
     Surface(
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = FavoriteContainer,
+        contentColor = Favorite,
     ) {
         Icon(
             imageVector = Icons.Filled.Star,

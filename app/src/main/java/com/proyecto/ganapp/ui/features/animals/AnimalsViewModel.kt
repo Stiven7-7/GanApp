@@ -34,6 +34,9 @@ class AnimalsViewModel @Inject constructor(
 
     private var allAnimals: List<Animal> = emptyList()
 
+    private val _speciesCounts = MutableStateFlow(AnimalSpeciesCounts())
+    val speciesCounts: StateFlow<AnimalSpeciesCounts> = _speciesCounts
+
     private val _registrationUiState = MutableStateFlow<AnimalRegistrationUiState>(
         AnimalRegistrationUiState.Idle,
     )
@@ -48,6 +51,7 @@ class AnimalsViewModel @Inject constructor(
             try {
                 getAnimalsUseCase(userId).collect { animals ->
                     allAnimals = animals
+                    _speciesCounts.value = calculateSpeciesCounts(animals)
                     publishVisibleAnimals()
                 }
             } catch (exception: CancellationException) {
@@ -66,6 +70,26 @@ class AnimalsViewModel @Inject constructor(
     fun updateSpeciesFilter(filter: AnimalSpeciesFilter) {
         _speciesFilter.value = filter
         republishLoadedAnimals()
+    }
+
+    private fun calculateSpeciesCounts(animals: List<Animal>): AnimalSpeciesCounts {
+        var vacas = 0
+        var cerdos = 0
+        var ovejas = 0
+        for (animal in animals) {
+            when (animal.especie) {
+                EspecieAnimal.VACA -> vacas += 1
+                EspecieAnimal.CERDO -> cerdos += 1
+                EspecieAnimal.OVEJA -> ovejas += 1
+                EspecieAnimal.SIN_ESPECIFICAR -> {}
+            }
+        }
+        return AnimalSpeciesCounts(
+            total = animals.size,
+            vacas = vacas,
+            cerdos = cerdos,
+            ovejas = ovejas,
+        )
     }
 
     private fun republishLoadedAnimals() {
