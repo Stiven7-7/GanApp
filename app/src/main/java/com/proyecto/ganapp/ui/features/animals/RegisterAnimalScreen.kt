@@ -4,9 +4,16 @@ import android.net.Uri
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -14,9 +21,20 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Scale
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -25,7 +43,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -35,16 +56,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.usecase.animal.RegisterAnimalValidationError
 import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
+
+private val registerSpeciesOptions = listOf(
+    EspecieAnimal.VACA to "Vaca",
+    EspecieAnimal.CERDO to "Cerdo",
+    EspecieAnimal.OVEJA to "Oveja",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,67 +180,40 @@ fun RegisterAnimalScreen(
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(GanAppSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
         ) {
-            AnimalFormPhoto(
+            RegisterAnimalPhoto(
                 fotoUri = fotoUri,
                 fallbackSpecies = especie,
                 enabled = inputsEnabled,
-                pickLabel = if (fotoUri == null) "Seleccionar foto" else "Cambiar foto",
-                showRemove = fotoUri != null,
                 onPickPhoto = { launcher.launch("image/*") },
                 onRemovePhoto = { fotoUri = null },
             )
-            AnimalFormSectionTitle(text = "Especie")
-            AnimalSpeciesSelector(
+            RegisterSpeciesSelector(
                 selected = especie,
                 enabled = inputsEnabled,
+                error = speciesError,
                 onSelected = { especie = it },
             )
-            if (speciesError != null) {
-                Text(
-                    text = speciesError,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            AnimalFormSectionTitle(text = "Información")
-            AnimalFormTextField(
-                value = nombre,
-                onValueChange = { nombre = it },
-                label = "Nombre del animal",
-                placeholder = "Ej: Manchita",
-                enabled = inputsEnabled,
-                error = nameError,
-            )
-            AnimalFormTextField(
-                value = edad,
-                onValueChange = {
+            RegisterInformationCard(
+                nombre = nombre,
+                onNombreChange = { nombre = it },
+                edad = edad,
+                onEdadChange = {
                     edad = it
                     localEdadError = null
                 },
-                label = "Edad (años)",
-                enabled = inputsEnabled,
-                error = ageError,
-                keyboardType = KeyboardType.Number,
-            )
-            AnimalFormTextField(
-                value = peso,
-                onValueChange = {
+                peso = peso,
+                onPesoChange = {
                     peso = it
                     localPesoError = null
                 },
-                label = "Peso (kg)",
+                color = color,
+                onColorChange = { color = it },
                 enabled = inputsEnabled,
-                error = weightError,
-                keyboardType = KeyboardType.Number,
-            )
-            AnimalFormTextField(
-                value = color,
-                onValueChange = { color = it },
-                label = "Color",
-                enabled = inputsEnabled,
-                error = null,
+                nameError = nameError,
+                ageError = ageError,
+                weightError = weightError,
             )
             if (formError != null) {
                 Text(
@@ -236,7 +245,8 @@ fun RegisterAnimalScreen(
                 enabled = inputsEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = AnimalFormPrimaryButtonMinHeight),
+                    .heightIn(min = 56.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -249,6 +259,12 @@ fun RegisterAnimalScreen(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(modifier = Modifier.size(GanAppSpacing.xs))
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.Save,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.size(GanAppSpacing.xs))
                 }
                 Text(
                     text = "Guardar en dispositivo",
@@ -256,6 +272,340 @@ fun RegisterAnimalScreen(
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RegisterAnimalPhoto(
+    fotoUri: String?,
+    fallbackSpecies: EspecieAnimal?,
+    enabled: Boolean,
+    onPickPhoto: () -> Unit,
+    onRemovePhoto: () -> Unit,
+) {
+    var photoFailed by remember(fotoUri) { mutableStateOf(false) }
+    val showPhoto = !fotoUri.isNullOrBlank() && !photoFailed
+    val frameModifier = Modifier
+        .fillMaxWidth()
+        .aspectRatio(4f / 3f)
+        .clip(MaterialTheme.shapes.large)
+
+    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+        Text(
+            text = "Foto del animal",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        if (showPhoto) {
+            AsyncImage(
+                model = fotoUri,
+                contentDescription = null,
+                modifier = frameModifier,
+                contentScale = ContentScale.Crop,
+                onError = { photoFailed = true },
+            )
+        } else {
+            val fallbackRes = fallbackSpecies?.let(::getAnimalImageRes)
+            Surface(
+                modifier = frameModifier,
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (fallbackRes != null) {
+                        Image(
+                            painter = painterResource(id = fallbackRes),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(GanAppSpacing.lg),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.PhotoCamera,
+                            contentDescription = null,
+                            modifier = Modifier.size(GanAppSpacing.xxl),
+                        )
+                    }
+                }
+            }
+        }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        ) {
+            OutlinedButton(
+                onClick = onPickPhoto,
+                enabled = enabled,
+                modifier = Modifier.heightIn(min = GanAppSpacing.xxl),
+            ) {
+                Text(
+                    text = if (fotoUri == null) "Seleccionar foto" else "Cambiar foto",
+                    textAlign = TextAlign.Center,
+                )
+            }
+            if (fotoUri != null) {
+                OutlinedButton(
+                    onClick = onRemovePhoto,
+                    enabled = enabled,
+                    modifier = Modifier.heightIn(min = GanAppSpacing.xxl),
+                ) {
+                    Text(text = "Quitar foto", textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RegisterSpeciesSelector(
+    selected: EspecieAnimal?,
+    enabled: Boolean,
+    error: String?,
+    onSelected: (EspecieAnimal) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+        Text(
+            text = "Especie",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+        ) {
+            registerSpeciesOptions.forEach { (option, label) ->
+                RegisterSpeciesOption(
+                    label = label,
+                    imageRes = getAnimalImageRes(option),
+                    selected = selected == option,
+                    enabled = enabled,
+                    onClick = { onSelected(option) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        if (error != null) {
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RegisterSpeciesOption(
+    label: String,
+    imageRes: Int?,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = modifier
+            .heightIn(min = 72.dp)
+            .selectable(
+                selected = selected,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = label
+            },
+        shape = MaterialTheme.shapes.large,
+        color = containerColor,
+        contentColor = contentColor,
+        border = if (selected) {
+            null
+        } else {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        },
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(GanAppSpacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs, Alignment.CenterVertically),
+        ) {
+            if (imageRes != null) {
+                Image(
+                    painter = painterResource(id = imageRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(GanAppSpacing.xl),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+                textAlign = TextAlign.Center,
+            )
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            } else {
+                Spacer(modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RegisterInformationCard(
+    nombre: String,
+    onNombreChange: (String) -> Unit,
+    edad: String,
+    onEdadChange: (String) -> Unit,
+    peso: String,
+    onPesoChange: (String) -> Unit,
+    color: String,
+    onColorChange: (String) -> Unit,
+    enabled: Boolean,
+    nameError: String?,
+    ageError: String?,
+    weightError: String?,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(GanAppSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Información",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            RegisterLabeledField(
+                label = "Nombre del animal",
+                value = nombre,
+                onValueChange = onNombreChange,
+                enabled = enabled,
+                error = nameError,
+                placeholder = "Ej: Manchita",
+                leadingIcon = Icons.AutoMirrored.Outlined.Label,
+            )
+            RegisterLabeledField(
+                label = "Edad (años)",
+                value = edad,
+                onValueChange = onEdadChange,
+                enabled = enabled,
+                error = ageError,
+                keyboardType = KeyboardType.Number,
+                suffix = "años",
+                leadingIcon = Icons.Outlined.CalendarMonth,
+            )
+            RegisterLabeledField(
+                label = "Peso (kg)",
+                value = peso,
+                onValueChange = onPesoChange,
+                enabled = enabled,
+                error = weightError,
+                keyboardType = KeyboardType.Number,
+                suffix = "kg",
+                leadingIcon = Icons.Outlined.Scale,
+            )
+            RegisterLabeledField(
+                label = "Color",
+                value = color,
+                onValueChange = onColorChange,
+                enabled = enabled,
+                error = null,
+                leadingIcon = Icons.Outlined.Palette,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RegisterLabeledField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+    error: String?,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    placeholder: String? = null,
+    suffix: String? = null,
+    leadingIcon: ImageVector? = null,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            isError = error != null,
+            singleLine = true,
+            placeholder = placeholder?.let { text -> { Text(text) } },
+            suffix = suffix?.let { text -> { Text(text) } },
+            leadingIcon = leadingIcon?.let { icon ->
+                {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                    )
+                }
+            },
+            supportingText = error?.let { message -> { Text(message) } },
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
+        )
     }
 }
 
