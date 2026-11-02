@@ -2,6 +2,9 @@ package com.proyecto.ganapp.data.local.db
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.proyecto.ganapp.data.mapper.parseNotificationScheduleTime
+import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
+import com.proyecto.ganapp.domain.model.TipoNotificacion
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -149,5 +152,146 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL(
             "ALTER TABLE animal ADD COLUMN esFavorito INTEGER NOT NULL DEFAULT 0",
         )
+    }
+}
+
+/** Preparada para v11; NO registrada en DatabaseModule ni ejecutada por AppDatabase v10. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Room ejecutará la migración en su transacción. Cualquier error debe abortarla.
+        db.query("PRAGMA foreign_key_check").use { cursor ->
+            check(!cursor.moveToFirst()) { "Migration 10→11 aborted: legacy foreign key violation" }
+        }
+        db.query(
+            """
+            SELECT 1
+            FROM notificacion_animal na
+            JOIN notificacion n ON n.idNotificacion = na.idNotificacion
+            JOIN animal a ON a.idAnimal = na.idAnimal
+            WHERE n.idUsuario != a.idUsuario
+            LIMIT 1
+            """.trimIndent(),
+        ).use { cursor ->
+            check(!cursor.moveToFirst()) { "Migration 10→11 aborted: cross-user notification association" }
+        }
+        db.query("SELECT idNotificacion, tipo, hora, seRepite FROM notificacion").use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                check(TipoNotificacion.fromPersistentString(cursor.getString(1)) != null) {
+                    "Migration 10→11 aborted: unknown notification type at ID $id"
+                }
+                parseNotificationScheduleTime(cursor.getString(2))
+                check(RecurrenciaNotificacion.fromPersistentString(cursor.getString(3)) != null) {
+                    "Migration 10→11 aborted: unknown recurrence at ID $id"
+                }
+            }
+        }
+        val templateCount = db.query("SELECT COUNT(*) FROM notificacion").use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getLong(0)
+        }
+        val scheduleCount = db.query(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM notificacion_animal) +
+                (SELECT COUNT(*) FROM notificacion n WHERE NOT EXISTS (
+                    SELECT 1 FROM notificacion_animal na WHERE na.idNotificacion = n.idNotificacion
+                ))
+            """.trimIndent(),
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getLong(0)
+        }
+
+        db.execSQL(
+            """
+            CREATE TABLE `plantilla_notificacion` (
+                `idPlantilla` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `titulo` TEXT NOT NULL,
+                `tipo` TEXT NOT NULL,
+                `idUsuario` INTEGER NOT NULL,
+                `legacyDescripcion` TEXT,
+                `legacyEstado` TEXT,
+                `legacyFechaCreacion` INTEGER,
+                `legacyDosisPorDia` INTEGER,
+                `legacyIntervaloHoras` INTEGER,
+                FOREIGN KEY(`idUsuario`) REFERENCES `usuario`(`idUsuario`)
+                    ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TABLE `programacion_notificacion` (
+                `idProgramacion` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `idPlantilla` INTEGER NOT NULL,
+                `idAnimal` INTEGER,
+                `fechaInicio` INTEGER NOT NULL,
+                `fechaFin` INTEGER NOT NULL,
+                `hora` TEXT NOT NULL,
+                `recurrencia` TEXT NOT NULL,
+                FOREIGN KEY(`idPlantilla`) REFERENCES `plantilla_notificacion`(`idPlantilla`)
+                    ON UPDATE NO ACTION ON DELETE RESTRICT,
+                FOREIGN KEY(`idAnimal`) REFERENCES `animal`(`idAnimal`)
+                    ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX `index_plantilla_notificacion_idUsuario` ON `plantilla_notificacion` (`idUsuario`)")
+        db.execSQL("CREATE INDEX `index_programacion_notificacion_idPlantilla` ON `programacion_notificacion` (`idPlantilla`)")
+        db.execSQL("CREATE INDEX `index_programacion_notificacion_idAnimal` ON `programacion_notificacion` (`idAnimal`)")
+
+        db.execSQL(
+            """
+            INSERT INTO plantilla_notificacion (
+                idPlantilla, titulo, tipo, idUsuario, legacyDescripcion, legacyEstado,
+                legacyFechaCreacion, legacyDosisPorDia, legacyIntervaloHoras
+            )
+            SELECT idNotificacion, nombre, tipo, idUsuario, descripcion, estado,
+                fechaCreacion, dosisPorDia, intervaloHoras
+            FROM notificacion
+            """.trimIndent(),
+        )
+        // Se omite idProgramacion: cada relación obtiene su propio ID autogenerado.
+        db.execSQL(
+            """
+            INSERT INTO programacion_notificacion (
+                idPlantilla, idAnimal, fechaInicio, fechaFin, hora, recurrencia
+            )
+            SELECT n.idNotificacion, na.idAnimal, n.fechaInicio, COALESCE(n.fechaFin, n.fechaInicio),
+                n.hora, CASE WHEN n.seRepite = 'CADA 15 DIAS' THEN 'CADA 15 DÍAS' ELSE n.seRepite END
+            FROM notificacion n
+            JOIN notificacion_animal na ON na.idNotificacion = n.idNotificacion
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT INTO programacion_notificacion (
+                idPlantilla, idAnimal, fechaInicio, fechaFin, hora, recurrencia
+            )
+            SELECT n.idNotificacion, NULL, n.fechaInicio, COALESCE(n.fechaFin, n.fechaInicio),
+                n.hora, CASE WHEN n.seRepite = 'CADA 15 DIAS' THEN 'CADA 15 DÍAS' ELSE n.seRepite END
+            FROM notificacion n
+            WHERE NOT EXISTS (
+                SELECT 1 FROM notificacion_animal na WHERE na.idNotificacion = n.idNotificacion
+            )
+            """.trimIndent(),
+        )
+
+        db.query("SELECT COUNT(*) FROM plantilla_notificacion").use { cursor ->
+            check(cursor.moveToFirst() && cursor.getLong(0) == templateCount) {
+                "Migration 10→11 aborted: template count mismatch"
+            }
+        }
+        db.query("SELECT COUNT(*) FROM programacion_notificacion").use { cursor ->
+            check(cursor.moveToFirst() && cursor.getLong(0) == scheduleCount) {
+                "Migration 10→11 aborted: schedule count mismatch"
+            }
+        }
+        db.query("PRAGMA foreign_key_check").use { cursor ->
+            check(!cursor.moveToFirst()) { "Migration 10→11 aborted: migrated foreign key violation" }
+        }
+        db.execSQL("DROP TABLE notificacion_animal")
+        db.execSQL("DROP TABLE notificacion")
     }
 }
