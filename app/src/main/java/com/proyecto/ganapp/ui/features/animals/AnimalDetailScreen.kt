@@ -28,6 +28,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,7 +72,12 @@ fun AnimalDetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Ficha del animal") },
+                title = { Text("Ficha del animal", textAlign = TextAlign.Center) },
+                expandedHeight = if (LocalDensity.current.fontScale >= 1.5f) {
+                    GanAppSpacing.xxl * 3
+                } else {
+                    TopAppBarDefaults.TopAppBarExpandedHeight
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -193,68 +200,78 @@ private fun AnimalDetailContent(
     animal: Animal,
     modifier: Modifier = Modifier,
 ) {
-    val rows = buildAnimalDetailRows(animal)
+    val rows = buildList {
+        add(AnimalDetailRow("Nombre", animal.nombre))
+        if (shouldShowBreed(animal.raza)) {
+            add(AnimalDetailRow("Raza", animal.raza))
+        }
+        addAll(buildAnimalDetailRows(animal))
+    }
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(GanAppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
     ) {
-        AnimalDetailPhoto(animal)
-        Spacer(modifier = Modifier.height(GanAppSpacing.md))
-        Text(
-            text = animal.nombre,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(GanAppSpacing.sm))
-        AnimalSpeciesChip(especie = animal.especie)
-        if (shouldShowBreed(animal.raza)) {
-            Spacer(modifier = Modifier.height(GanAppSpacing.sm))
+        Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
             Text(
-                text = animalBreedLabel(animal.raza),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (rows.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(GanAppSpacing.lg))
-            Text(
-                text = "Información",
+                text = "Foto del animal",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(GanAppSpacing.xs))
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
+            AnimalDetailPhoto(animal)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
+            Text(
+                text = "Especie",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            AnimalSpeciesChip(especie = animal.especie)
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(GanAppSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
             ) {
-                Column(
-                    modifier = Modifier.padding(GanAppSpacing.md),
-                    verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.xs),
                 ) {
-                    rows.forEach { row ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.md),
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            Text(
-                                text = row.label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = row.value,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.End,
-                            )
-                        }
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "Información",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                }
+                rows.forEach { row ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+                        verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
+                    ) {
+                        Text(
+                            text = row.label,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = row.value,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
@@ -298,6 +315,9 @@ private fun AnimalPhotoPlaceholder(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
             color = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
@@ -306,7 +326,7 @@ private fun AnimalPhotoPlaceholder(
                     Image(
                         painter = painterResource(id = imageRes),
                         contentDescription = null,
-                        modifier = Modifier.size(120.dp),
+                        modifier = Modifier.fillMaxSize().padding(GanAppSpacing.lg),
                         contentScale = ContentScale.Fit,
                     )
                 } else {
