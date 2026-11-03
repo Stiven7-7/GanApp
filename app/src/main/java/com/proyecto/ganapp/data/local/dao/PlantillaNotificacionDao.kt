@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.proyecto.ganapp.data.local.entity.PlantillaNotificacionEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -21,8 +20,8 @@ interface PlantillaNotificacionDao {
     @Query("SELECT * FROM plantilla_notificacion WHERE idUsuario = :userId")
     fun getByUser(userId: Long): Flow<List<PlantillaNotificacionEntity>>
 
-    @Update
-    suspend fun update(template: PlantillaNotificacionEntity): Int
+    @Query("UPDATE plantilla_notificacion SET titulo = :titulo, tipo = :tipo WHERE idPlantilla = :idPlantilla")
+    suspend fun updateContent(idPlantilla: Long, titulo: String, tipo: String): Int
 
     @Query("DELETE FROM plantilla_notificacion WHERE idPlantilla = :id")
     suspend fun deleteById(id: Long)
