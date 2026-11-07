@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.first
 import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
 import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
 import java.time.ZoneId
+import javax.inject.Inject
 
-class CreateAnimalNotificationScheduleUseCase(
+class CreateAnimalNotificationScheduleUseCase @Inject constructor(
     private val repository: NotificationScheduleRepository,
     private val templateRepository: NotificationTemplateRepository,
     private val animalRepository: AnimalRepository,

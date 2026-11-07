@@ -1,7 +1,9 @@
 package com.proyecto.ganapp.di
 
-import com.proyecto.ganapp.core.notifications.AndroidNotificationAlarmScheduler
-import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
+import com.proyecto.ganapp.core.notifications.AndroidLegacyNotificationAlarmCanceller
+import com.proyecto.ganapp.core.notifications.AndroidNotificationScheduleAlarmService
+import com.proyecto.ganapp.domain.service.LegacyNotificationAlarmCanceller
+import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -14,7 +16,13 @@ abstract class NotificationSchedulerModule {
 
     @Binds
     @Singleton
-    abstract fun bindNotificationAlarmScheduler(
-        impl: AndroidNotificationAlarmScheduler,
-    ): NotificationAlarmScheduler
+    abstract fun bindNotificationScheduleAlarmService(
+        impl: AndroidNotificationScheduleAlarmService,
+    ): NotificationScheduleAlarmService
+
+    @Binds
+    @Singleton
+    abstract fun bindLegacyNotificationAlarmCanceller(
+        impl: AndroidLegacyNotificationAlarmCanceller,
+    ): LegacyNotificationAlarmCanceller
 }

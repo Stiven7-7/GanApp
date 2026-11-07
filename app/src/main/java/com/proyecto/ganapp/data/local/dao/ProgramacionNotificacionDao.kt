@@ -7,7 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.proyecto.ganapp.data.local.entity.ProgramacionNotificacionEntity
 
-/** Puerto físico futuro, no expuesto por AppDatabase v10. */
+/** Puerto físico de Programaciones expuesto por AppDatabase v11. */
 @Dao
 interface ProgramacionNotificacionDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
@@ -21,6 +21,9 @@ interface ProgramacionNotificacionDao {
 
     @Query("DELETE FROM programacion_notificacion WHERE idProgramacion = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM programacion_notificacion WHERE idAnimal = :animalId")
+    suspend fun deleteByAnimal(animalId: Long)
 
     @Query("SELECT * FROM programacion_notificacion WHERE idAnimal = :animalId")
     suspend fun getByAnimal(animalId: Long): List<ProgramacionNotificacionEntity>

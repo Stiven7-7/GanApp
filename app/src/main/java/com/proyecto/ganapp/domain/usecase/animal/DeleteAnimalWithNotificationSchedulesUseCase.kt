@@ -7,10 +7,11 @@ import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
 import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
 import kotlin.coroutines.cancellation.CancellationException
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 
-/** Coordinación preparada para el cutover futuro; no conectada a UI ni DI productiva. */
-class DeleteAnimalWithNotificationSchedulesUseCase(
+/** Coordinación de borrado. No hay consumidor de UI: no se expone una acción nueva. */
+class DeleteAnimalWithNotificationSchedulesUseCase @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val animalRepository: AnimalRepository,
     private val scheduleRepository: NotificationScheduleRepository,

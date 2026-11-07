@@ -42,10 +42,13 @@ import com.proyecto.ganapp.ui.features.animals.RegisterAnimalScreen
 import com.proyecto.ganapp.ui.features.auth.LoginScreen
 import com.proyecto.ganapp.ui.features.auth.RegisterScreen
 import com.proyecto.ganapp.ui.features.home.HomeScreen
-import com.proyecto.ganapp.ui.features.notifications.AnimalNotificationsScreen
-import com.proyecto.ganapp.ui.features.notifications.AssignNotificationScreen
-import com.proyecto.ganapp.ui.features.notifications.NotificationsScreen
-import com.proyecto.ganapp.ui.features.notifications.RegisterNotificationScreen
+import com.proyecto.ganapp.ui.features.notifications.animalschedules.AnimalSchedulesRoute
+import com.proyecto.ganapp.ui.features.notifications.animalschedules.AnimalSchedulesViewModel
+import com.proyecto.ganapp.ui.features.notifications.scheduling.AnimalNotificationScheduleRoute
+import com.proyecto.ganapp.ui.features.notifications.scheduling.AnimalNotificationScheduleViewModel
+import com.proyecto.ganapp.ui.features.notifications.templates.NotificationTemplatesRoute
+import com.proyecto.ganapp.ui.features.notifications.templates.NotificationTemplatesViewModel
+import java.time.ZoneId
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -213,10 +216,10 @@ private fun AppNavGraph(
                 onVerAnimales = { navigateTopLevel(GanAppTopLevelDestination.Animals) },
                 onNotificaciones = { navigateTopLevel(GanAppTopLevelDestination.Notifications) },
                 onAssignNotification = { animalId ->
-                    navController.navigate("assignNotification/$userId/$animalId")
+                    navController.navigate("scheduleNotification/$animalId")
                 },
                 onViewNotifications = { animalId ->
-                    navController.navigate("animalNotifications/$animalId")
+                    navController.navigate("animalSchedules/$animalId")
                 },
             )
         }
@@ -241,10 +244,10 @@ private fun AppNavGraph(
                     navController.navigate("register_animal/$routeUserId")
                 },
                 onAssignNotification = { animalId ->
-                    navController.navigate("assignNotification/$routeUserId/$animalId")
+                    navController.navigate("scheduleNotification/$animalId")
                 },
                 onViewNotifications = { animalId ->
-                    navController.navigate("animalNotifications/$animalId")
+                    navController.navigate("animalSchedules/$animalId")
                 },
                 onAnimalClick = { animalId ->
                     navController.navigate("animal_detail/$animalId")
@@ -278,42 +281,38 @@ private fun AppNavGraph(
             )
         }
 
-        composable("assignNotification/{userId}/{animalId}") { backStackEntry ->
-            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
-            val animalId = backStackEntry.arguments?.getString("animalId")?.toLong() ?: 0L
-
-            AssignNotificationScreen(
-                userId = routeUserId,
-                animalId = animalId,
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable("animalNotifications/{animalId}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("animalId")!!.toLong()
-
-            AnimalNotificationsScreen(
-                animalId = id,
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable("notifications/{userId}") { backStackEntry ->
-            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
-
-            NotificationsScreen(
-                userId = routeUserId,
-                onAddNotification = {
-                    navController.navigate("register_notification/$routeUserId")
+        composable("scheduleNotification/{animalId}") { backStackEntry ->
+            val animalId = backStackEntry.arguments?.getString("animalId")?.toLongOrNull() ?: 0L
+            val viewModel = hiltViewModel<
+                AnimalNotificationScheduleViewModel,
+                AnimalNotificationScheduleViewModel.Factory,
+                >(
+                creationCallback = { factory ->
+                    factory.create(animalId, { System.currentTimeMillis() }, ZoneId.systemDefault())
                 },
             )
+            AnimalNotificationScheduleRoute(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onFinished = { navController.popBackStack() },
+            )
         }
 
-        composable("register_notification/{userId}") { backStackEntry ->
-            val routeUserId = backStackEntry.arguments?.getString("userId")?.toLong() ?: 0L
+        composable("animalSchedules/{animalId}") { backStackEntry ->
+            val animalId = backStackEntry.arguments?.getString("animalId")?.toLongOrNull() ?: 0L
+            val viewModel = hiltViewModel<AnimalSchedulesViewModel, AnimalSchedulesViewModel.Factory>(
+                creationCallback = { factory -> factory.create(animalId) },
+            )
+            AnimalSchedulesRoute(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
 
-            RegisterNotificationScreen(
-                userId = routeUserId,
+        composable("notifications/{userId}") {
+            val viewModel = hiltViewModel<NotificationTemplatesViewModel>()
+            NotificationTemplatesRoute(
+                viewModel = viewModel,
                 onBack = { navController.popBackStack() },
             )
         }

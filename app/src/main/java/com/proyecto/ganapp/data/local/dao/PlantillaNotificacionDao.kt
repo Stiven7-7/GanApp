@@ -7,7 +7,7 @@ import androidx.room.Query
 import com.proyecto.ganapp.data.local.entity.PlantillaNotificacionEntity
 import kotlinx.coroutines.flow.Flow
 
-/** Puerto físico futuro, no expuesto por AppDatabase v10. */
+/** Puerto físico de Plantillas expuesto por AppDatabase v11. */
 @Dao
 interface PlantillaNotificacionDao {
     // ABORT evita que un conflicto de PK elimine implícitamente una plantilla mediante REPLACE.

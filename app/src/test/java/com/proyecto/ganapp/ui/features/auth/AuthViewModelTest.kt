@@ -10,8 +10,15 @@ import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
-import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationAlarmsUseCase
-import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
+import com.proyecto.ganapp.domain.model.PlantillaNotificacion
+import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
+import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
+import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
+import com.proyecto.ganapp.domain.service.LegacyNotificationAlarmCanceller
+import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
+import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
+import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
+import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationScheduleAlarmsUseCase
 import com.proyecto.ganapp.domain.usecase.session.ActivateSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
@@ -57,12 +64,33 @@ class AuthViewModelTest {
             registerUserUseCase = RegisterUserUseCase(repository),
             activateSessionUseCase = ActivateSessionUseCase(
                 saveSessionUseCase = SaveSessionUseCase(sessionRepository),
-                reconcileNotificationAlarmsUseCase = ReconcileNotificationAlarmsUseCase(
+                reconcileNotificationScheduleAlarmsUseCase = ReconcileNotificationScheduleAlarmsUseCase(
                     sessionRepository = sessionRepository,
-                    notificationRepository = notificationRepository,
-                    scheduleNotificationUseCase = ScheduleNotificationUseCase(
-                        AuthActivationNotificationScheduler(),
-                    ),
+                    templateRepository = object : NotificationTemplateRepository {
+                        override fun getTemplatesByUser(userId: Long): Flow<List<PlantillaNotificacion>> {
+                            notificationRepository.calls += 1
+                            val failure = notificationRepository.error
+                            return if (failure != null) flow { throw failure } else flowOf(emptyList())
+                        }
+                        override suspend fun getTemplateById(templateId: Long) = null
+                        override suspend fun insertTemplate(template: PlantillaNotificacion) = 0L
+                        override suspend fun updateTemplate(template: PlantillaNotificacion) = false
+                        override suspend fun deleteTemplate(templateId: Long) = Unit
+                        override suspend fun hasSchedules(templateId: Long) = false
+                    },
+                    scheduleRepository = object : NotificationScheduleRepository {
+                        override suspend fun insertSchedule(schedule: ProgramacionNotificacion) = 0L
+                        override suspend fun getScheduleById(scheduleId: Long) = null
+                        override suspend fun updateSchedule(schedule: ProgramacionNotificacion) = false
+                        override suspend fun deleteSchedule(scheduleId: Long) = Unit
+                        override suspend fun getSchedulesByAnimal(animalId: Long) = emptyList<ProgramacionNotificacion>()
+                        override suspend fun getSchedulesByTemplate(templateId: Long) = emptyList<ProgramacionNotificacion>()
+                    },
+                    alarmService = object : NotificationScheduleAlarmService {
+                        override fun schedule(scheduleId: Long, triggerAtMillis: Long) = ScheduleAlarmResult.Scheduled
+                        override fun cancel(scheduleId: Long) = ScheduleAlarmCancelResult.Cancelled
+                    },
+                    legacyCanceller = LegacyNotificationAlarmCanceller { ScheduleAlarmCancelResult.Cancelled },
                 ),
             ),
         )

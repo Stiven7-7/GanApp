@@ -5,7 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Contrato físico futuro; idAnimal null preserva exclusivamente compatibilidad legacy. */
+/** Tabla física de Programaciones en AppDatabase v11. idAnimal null preserva compatibilidad legacy. */
 @Entity(
     tableName = "programacion_notificacion",
     foreignKeys = [

@@ -1,17 +1,20 @@
 package com.proyecto.ganapp.domain.usecase.session
 
-import com.proyecto.ganapp.domain.model.Notificacion
-import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
-import com.proyecto.ganapp.domain.model.NotificationCancelResult
-import com.proyecto.ganapp.domain.model.NotificationScheduleResult
+import com.proyecto.ganapp.domain.model.PlantillaNotificacion
+import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
-import com.proyecto.ganapp.domain.repository.NotificacionRepository
+import com.proyecto.ganapp.domain.model.TipoNotificacion
+import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
+import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.repository.SessionRepository
-import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
+import com.proyecto.ganapp.domain.service.LegacyNotificationAlarmCanceller
 import com.proyecto.ganapp.domain.service.NotificationRecurrenceEngine
-import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationAlarmsUseCase
-import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
+import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
+import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
+import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
+import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationScheduleAlarmsUseCase
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -31,21 +34,27 @@ class ActivateSessionUseCaseTest {
     private val now: Long = 123_456_789L
 
     private lateinit var session: ActivateProbeSessionRepository
-    private lateinit var notifications: ActivateProbeNotificacionRepository
-    private lateinit var scheduler: ActivateProbeNotificationScheduler
+    private lateinit var templates: ActivateProbeTemplateRepository
+    private lateinit var schedules: ActivateProbeScheduleRepository
+    private lateinit var alarms: ActivateProbeAlarmService
+    private lateinit var legacy: ActivateProbeLegacyCanceller
     private lateinit var useCase: ActivateSessionUseCase
 
     @Before
     fun setUp() {
         session = ActivateProbeSessionRepository()
-        notifications = ActivateProbeNotificacionRepository()
-        scheduler = ActivateProbeNotificationScheduler()
+        templates = ActivateProbeTemplateRepository()
+        schedules = ActivateProbeScheduleRepository()
+        alarms = ActivateProbeAlarmService()
+        legacy = ActivateProbeLegacyCanceller()
         useCase = ActivateSessionUseCase(
             saveSessionUseCase = SaveSessionUseCase(session),
-            reconcileNotificationAlarmsUseCase = ReconcileNotificationAlarmsUseCase(
+            reconcileNotificationScheduleAlarmsUseCase = ReconcileNotificationScheduleAlarmsUseCase(
                 sessionRepository = session,
-                notificationRepository = notifications,
-                scheduleNotificationUseCase = ScheduleNotificationUseCase(scheduler),
+                templateRepository = templates,
+                scheduleRepository = schedules,
+                alarmService = alarms,
+                legacyCanceller = legacy,
             ),
         )
     }
@@ -56,7 +65,7 @@ class ActivateSessionUseCaseTest {
 
         assertEquals(ActivateSessionResult.InvalidUserId, result)
         assertEquals(0, session.observeCalls)
-        assertEquals(0, notifications.calls)
+        assertEquals(0, templates.calls)
     }
 
     @Test
@@ -67,81 +76,74 @@ class ActivateSessionUseCaseTest {
 
         assertEquals(ActivateSessionResult.SessionSaveFailure, result)
         assertEquals(0, session.observeCalls)
-        assertEquals(0, notifications.calls)
+        assertEquals(0, templates.calls)
         assertEquals(0, session.clearCalls)
     }
 
     @Test
     fun saveExitoso_reconciliaUnaVezConNowYZoneIdRecibidos() = runTest {
-        notifications.notifications = listOf(notification(id = 42L))
+        templates.templates = listOf(template(42L))
+        schedules.byTemplate[42L] = listOf(schedule(id = 9L, templateId = 42L))
 
         val result = useCase(userId = 7L, now = now, zoneId = bogota)
 
         val expected = NotificationRecurrenceEngine.nextOccurrence(
             recurrence = RecurrenciaNotificacion.NO,
-            fechaInicio = notification(id = 42L).fechaInicio,
-            fechaFin = notification(id = 42L).fechaFin,
+            fechaInicio = LocalDate.of(2026, 6, 15).toEpochDay(),
+            fechaFin = LocalDate.of(2026, 6, 15).toEpochDay(),
             hora = "08:00",
             afterMillis = now,
             zoneId = bogota,
         )
         val otherZone = NotificationRecurrenceEngine.nextOccurrence(
             recurrence = RecurrenciaNotificacion.NO,
-            fechaInicio = notification(id = 42L).fechaInicio,
-            fechaFin = notification(id = 42L).fechaFin,
+            fechaInicio = LocalDate.of(2026, 6, 15).toEpochDay(),
+            fechaFin = LocalDate.of(2026, 6, 15).toEpochDay(),
             hora = "08:00",
             afterMillis = now,
             zoneId = ZoneId.of("Europe/Madrid"),
         )
         assertEquals(ActivateSessionResult.Success, result)
         assertEquals(1, session.observeCalls)
-        assertEquals(1, notifications.calls)
-        assertEquals(listOf(7L), notifications.requestedUserIds)
-        assertEquals(expected, scheduler.requests.single().triggerAtMillis)
-        assertNotEquals(otherZone, scheduler.requests.single().triggerAtMillis)
+        assertEquals(listOf(42L), legacy.ids)
+        assertEquals(9L, alarms.scheduled.single().first)
+        assertEquals(expected, alarms.scheduled.single().second)
+        assertNotEquals(otherZone, alarms.scheduled.single().second)
     }
 
     @Test
     fun reconciledSinFallosConSkipped_retornaSuccess() = runTest {
-        notifications.notifications = listOf(notification(id = 0L))
+        templates.templates = listOf(template(0L))
 
         val result = useCase(userId = 7L, now = now, zoneId = bogota)
 
         assertEquals(ActivateSessionResult.Success, result)
-        assertEquals(0, scheduler.scheduleCalls)
+        assertEquals(0, alarms.scheduled.size)
         assertEquals(0, session.clearCalls)
     }
 
     @Test
     fun reconciledConFallos_degradaSinRollback() = runTest {
-        notifications.notifications = listOf(notification(id = 42L))
-        scheduler.scheduleResult = NotificationScheduleResult.Failure(
-            notificationId = 42L,
-            cause = IllegalStateException("alarm"),
-        )
+        templates.templates = listOf(template(42L))
+        schedules.byTemplate[42L] = listOf(schedule(9L, 42L))
+        alarms.scheduleResult = ScheduleAlarmResult.Failure(IllegalStateException("alarm"))
 
         val result = useCase(userId = 7L, now = now, zoneId = bogota)
 
-        assertEquals(
-            ActivateSessionResult.SuccessWithNotificationReconciliationFailure,
-            result,
-        )
+        assertEquals(ActivateSessionResult.SuccessWithNotificationReconciliationFailure, result)
         assertEquals(1, session.saveCalls)
         assertEquals(0, session.clearCalls)
     }
 
     @Test
     fun falloGlobalDeReconciliacion_degradaSinRollback() = runTest {
-        notifications.error = IllegalStateException("notifications")
+        templates.error = IllegalStateException("templates")
 
         val result = useCase(userId = 7L, now = now, zoneId = bogota)
 
-        assertEquals(
-            ActivateSessionResult.SuccessWithNotificationReconciliationFailure,
-            result,
-        )
+        assertEquals(ActivateSessionResult.SuccessWithNotificationReconciliationFailure, result)
         assertEquals(1, session.saveCalls)
-        assertEquals(0, scheduler.scheduleCalls)
+        assertEquals(0, alarms.scheduled.size)
         assertEquals(0, session.clearCalls)
     }
 
@@ -151,19 +153,16 @@ class ActivateSessionUseCaseTest {
 
         val result = useCase(userId = 7L, now = now, zoneId = bogota)
 
-        assertEquals(
-            ActivateSessionResult.SuccessWithNotificationReconciliationFailure,
-            result,
-        )
+        assertEquals(ActivateSessionResult.SuccessWithNotificationReconciliationFailure, result)
         assertEquals(1, session.saveCalls)
-        assertEquals(0, notifications.calls)
+        assertEquals(0, templates.calls)
         assertEquals(0, session.clearCalls)
     }
 
     @Test
     fun cancellationExceptionDeReconciliacion_sePropaga() = runTest {
         val cancellation = CancellationException("reconcile")
-        notifications.error = cancellation
+        templates.error = cancellation
 
         try {
             useCase(userId = 7L, now = now, zoneId = bogota)
@@ -175,19 +174,22 @@ class ActivateSessionUseCaseTest {
         assertEquals(0, session.clearCalls)
     }
 
-    private fun notification(id: Long): Notificacion {
-        val day = LocalDate.of(2026, 6, 15).toEpochDay()
-        return Notificacion(
-            idNotificacion = id,
-            nombre = "Vacuna",
-            tipo = "Vacunación",
-            fechaInicio = day,
-            fechaFin = day,
-            seRepite = RecurrenciaNotificacion.NO.toPersistentString(),
-            hora = "08:00",
-            idUsuario = 7L,
-        )
-    }
+    private fun template(id: Long) = PlantillaNotificacion(
+        idPlantilla = id,
+        titulo = "Vacuna",
+        tipo = TipoNotificacion.VACUNACION,
+        idUsuario = 7L,
+    )
+
+    private fun schedule(id: Long, templateId: Long) = ProgramacionNotificacion(
+        idProgramacion = id,
+        idPlantilla = templateId,
+        idAnimal = 3L,
+        fechaInicio = LocalDate.of(2026, 6, 15),
+        fechaFin = LocalDate.of(2026, 6, 15),
+        hora = LocalTime.of(8, 0),
+        recurrencia = RecurrenciaNotificacion.NO,
+    )
 }
 
 private class ActivateProbeSessionRepository : SessionRepository {
@@ -206,55 +208,65 @@ private class ActivateProbeSessionRepository : SessionRepository {
 
     override suspend fun saveAuthenticatedUserId(userId: Long) {
         saveCalls += 1
-        savedUserId = userId
         saveError?.let { throw it }
+        savedUserId = userId
     }
 
     override suspend fun clearAuthenticatedUserId() {
         clearCalls += 1
+        savedUserId = null
     }
 }
 
-private class ActivateProbeNotificacionRepository : NotificacionRepository {
+private class ActivateProbeTemplateRepository : NotificationTemplateRepository {
+    var templates: List<PlantillaNotificacion> = emptyList()
     var calls: Int = 0
-    val requestedUserIds = mutableListOf<Long>()
-    var notifications: List<Notificacion> = emptyList()
     var error: Throwable? = null
 
-    override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> {
+    override fun getTemplatesByUser(userId: Long): Flow<List<PlantillaNotificacion>> {
         calls += 1
-        requestedUserIds += userId
         val failure = error
-        if (failure != null) {
-            return flow { throw failure }
-        }
-        return flowOf(notifications)
+        return if (failure != null) flow { throw failure } else flowOf(templates)
     }
 
-    override suspend fun insertNotification(notificacion: Notificacion): Long = 0L
-
-    override suspend fun updateNotification(notificacion: Notificacion) = Unit
-
-    override suspend fun deleteNotification(id: Long) = Unit
-
-    override suspend fun getNotificationById(id: Long): Notificacion? = null
+    override suspend fun getTemplateById(templateId: Long): PlantillaNotificacion? = null
+    override suspend fun insertTemplate(template: PlantillaNotificacion): Long = 0L
+    override suspend fun updateTemplate(template: PlantillaNotificacion): Boolean = false
+    override suspend fun deleteTemplate(templateId: Long) = Unit
+    override suspend fun hasSchedules(templateId: Long): Boolean = false
 }
 
-private class ActivateProbeNotificationScheduler : NotificationAlarmScheduler {
-    val requests = mutableListOf<NotificationAlarmRequest>()
-    var scheduleCalls: Int = 0
-    var scheduleResult: NotificationScheduleResult? = null
+private class ActivateProbeScheduleRepository : NotificationScheduleRepository {
+    val byTemplate = mutableMapOf<Long, List<ProgramacionNotificacion>>()
 
-    override fun scheduleNext(request: NotificationAlarmRequest): NotificationScheduleResult {
-        scheduleCalls += 1
-        requests += request
-        return scheduleResult ?: NotificationScheduleResult.Scheduled(
-            notificationId = request.notificationId,
-            triggerAtMillis = request.triggerAtMillis,
-        )
+    override suspend fun getSchedulesByTemplate(templateId: Long): List<ProgramacionNotificacion> =
+        byTemplate[templateId].orEmpty()
+
+    override suspend fun insertSchedule(schedule: ProgramacionNotificacion): Long = 0L
+    override suspend fun getScheduleById(scheduleId: Long): ProgramacionNotificacion? = null
+    override suspend fun updateSchedule(schedule: ProgramacionNotificacion): Boolean = false
+    override suspend fun deleteSchedule(scheduleId: Long) = Unit
+    override suspend fun getSchedulesByAnimal(animalId: Long): List<ProgramacionNotificacion> = emptyList()
+}
+
+private class ActivateProbeAlarmService : NotificationScheduleAlarmService {
+    val scheduled = mutableListOf<Pair<Long, Long>>()
+    var scheduleResult: ScheduleAlarmResult = ScheduleAlarmResult.Scheduled
+
+    override fun schedule(scheduleId: Long, triggerAtMillis: Long): ScheduleAlarmResult {
+        val result = scheduleResult
+        if (result is ScheduleAlarmResult.Scheduled) scheduled += scheduleId to triggerAtMillis
+        return result
     }
 
-    override fun cancel(notificationId: Long): NotificationCancelResult {
-        return NotificationCancelResult.Cancelled(notificationId)
+    override fun cancel(scheduleId: Long): ScheduleAlarmCancelResult = ScheduleAlarmCancelResult.Cancelled
+}
+
+private class ActivateProbeLegacyCanceller : LegacyNotificationAlarmCanceller {
+    val ids = mutableListOf<Long>()
+
+    override fun cancel(notificationId: Long): ScheduleAlarmCancelResult {
+        ids += notificationId
+        return ScheduleAlarmCancelResult.Cancelled
     }
 }

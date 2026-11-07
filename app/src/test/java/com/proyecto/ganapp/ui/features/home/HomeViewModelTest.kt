@@ -14,8 +14,15 @@ import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetFavoriteAnimalsUseCase
 import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
-import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserNotificationAlarmsUseCase
-import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
+import com.proyecto.ganapp.domain.model.PlantillaNotificacion
+import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
+import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
+import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
+import com.proyecto.ganapp.domain.service.LegacyNotificationAlarmCanceller
+import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
+import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
+import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
+import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserScheduleAlarmsUseCase
 import com.proyecto.ganapp.domain.usecase.session.ClearSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.LogoutUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.GetUsuarioByIdUseCase
@@ -57,13 +64,30 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             getUsuarioByIdUseCase = GetUsuarioByIdUseCase(usuarioRepository),
             logoutUseCase = LogoutUseCase(
-                cancelAuthenticatedUserNotificationAlarmsUseCase =
-                    CancelAuthenticatedUserNotificationAlarmsUseCase(
+                cancelAuthenticatedUserScheduleAlarmsUseCase =
+                    CancelAuthenticatedUserScheduleAlarmsUseCase(
                         sessionRepository = sessionRepository,
-                        notificationRepository = HomeAlarmNotificacionRepository(),
-                        scheduleNotificationUseCase = ScheduleNotificationUseCase(
-                            HomeAlarmNotificationScheduler(),
-                        ),
+                        templateRepository = object : NotificationTemplateRepository {
+                            override fun getTemplatesByUser(userId: Long) = flowOf(emptyList<PlantillaNotificacion>())
+                            override suspend fun getTemplateById(templateId: Long) = null
+                            override suspend fun insertTemplate(template: PlantillaNotificacion) = 0L
+                            override suspend fun updateTemplate(template: PlantillaNotificacion) = false
+                            override suspend fun deleteTemplate(templateId: Long) = Unit
+                            override suspend fun hasSchedules(templateId: Long) = false
+                        },
+                        scheduleRepository = object : NotificationScheduleRepository {
+                            override suspend fun insertSchedule(schedule: ProgramacionNotificacion) = 0L
+                            override suspend fun getScheduleById(scheduleId: Long) = null
+                            override suspend fun updateSchedule(schedule: ProgramacionNotificacion) = false
+                            override suspend fun deleteSchedule(scheduleId: Long) = Unit
+                            override suspend fun getSchedulesByAnimal(animalId: Long) = emptyList<ProgramacionNotificacion>()
+                            override suspend fun getSchedulesByTemplate(templateId: Long) = emptyList<ProgramacionNotificacion>()
+                        },
+                        alarmService = object : NotificationScheduleAlarmService {
+                            override fun schedule(scheduleId: Long, triggerAtMillis: Long) = ScheduleAlarmResult.Scheduled
+                            override fun cancel(scheduleId: Long) = ScheduleAlarmCancelResult.Cancelled
+                        },
+                        legacyCanceller = LegacyNotificationAlarmCanceller { ScheduleAlarmCancelResult.Cancelled },
                     ),
                 clearSessionUseCase = ClearSessionUseCase(sessionRepository),
             ),

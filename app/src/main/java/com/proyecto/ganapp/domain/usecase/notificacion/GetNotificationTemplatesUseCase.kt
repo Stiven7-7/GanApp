@@ -11,9 +11,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 import kotlinx.coroutines.flow.onStart
 
-class GetNotificationTemplatesUseCase(
+class GetNotificationTemplatesUseCase @Inject constructor(
     private val repository: NotificationTemplateRepository,
     private val sessionRepository: SessionRepository,
 ) {

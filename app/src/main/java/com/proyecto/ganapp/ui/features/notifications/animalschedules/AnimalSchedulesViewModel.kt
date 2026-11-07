@@ -2,6 +2,10 @@ package com.proyecto.ganapp.ui.features.notifications.animalschedules
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
+import dagger.hilt.android.lifecycle.HiltViewModel
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.GetAnimalNotificationSchedulesResult
 import com.proyecto.ganapp.domain.usecase.notificacion.GetAnimalNotificationSchedulesUseCase
@@ -11,12 +15,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Preparado sin HiltViewModel ni binding. La sesión y el ownership quedan en los use cases. */
-class AnimalSchedulesViewModel(
-    private val animalId: Long,
+@HiltViewModel(assistedFactory = AnimalSchedulesViewModel.Factory::class)
+class AnimalSchedulesViewModel @AssistedInject constructor(
+    @Assisted private val animalId: Long,
     private val getSchedules: GetAnimalNotificationSchedulesUseCase,
     private val getAnimal: GetAnimalByIdUseCase,
 ) : ViewModel() {
+    @AssistedFactory
+    interface Factory {
+        fun create(animalId: Long): AnimalSchedulesViewModel
+    }
+
     private val _uiState = MutableStateFlow<AnimalSchedulesContent>(AnimalSchedulesContent.Loading)
     val uiState = _uiState.asStateFlow()
     private var loadJob: Job? = null

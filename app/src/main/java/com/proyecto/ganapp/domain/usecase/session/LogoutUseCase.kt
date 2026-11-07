@@ -1,23 +1,21 @@
 package com.proyecto.ganapp.domain.usecase.session
 
-import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserNotificationAlarmsResult
-import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserNotificationAlarmsUseCase
+import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserScheduleAlarmsResult
+import com.proyecto.ganapp.domain.usecase.notificacion.CancelAuthenticatedUserScheduleAlarmsUseCase
 import javax.inject.Inject
 
 class LogoutUseCase @Inject constructor(
-    private val cancelAuthenticatedUserNotificationAlarmsUseCase:
-        CancelAuthenticatedUserNotificationAlarmsUseCase,
+    private val cancelAuthenticatedUserScheduleAlarmsUseCase:
+        CancelAuthenticatedUserScheduleAlarmsUseCase,
     private val clearSessionUseCase: ClearSessionUseCase,
 ) {
     suspend operator fun invoke(): LogoutResult {
-        val cancellation = cancelAuthenticatedUserNotificationAlarmsUseCase()
+        val cancellation = cancelAuthenticatedUserScheduleAlarmsUseCase()
         val clearSession = when (cancellation) {
-            is CancelAuthenticatedUserNotificationAlarmsResult.Cancelled ->
-                cancellation.failed == 0
-            CancelAuthenticatedUserNotificationAlarmsResult.NoAuthenticatedUser ->
-                true
-            is CancelAuthenticatedUserNotificationAlarmsResult.Failure ->
-                false
+            CancelAuthenticatedUserScheduleAlarmsResult.Cancelled,
+            CancelAuthenticatedUserScheduleAlarmsResult.NoAuthenticatedUser,
+            -> true
+            is CancelAuthenticatedUserScheduleAlarmsResult.Failure -> false
         }
         if (!clearSession) {
             return LogoutResult.AlarmCancellationFailure

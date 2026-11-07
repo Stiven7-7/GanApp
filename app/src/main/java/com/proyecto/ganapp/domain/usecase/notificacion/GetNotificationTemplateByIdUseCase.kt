@@ -3,9 +3,10 @@ package com.proyecto.ganapp.domain.usecase.notificacion
 import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import kotlin.coroutines.cancellation.CancellationException
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 
-class GetNotificationTemplateByIdUseCase(
+class GetNotificationTemplateByIdUseCase @Inject constructor(
     private val repository: NotificationTemplateRepository,
     private val sessionRepository: SessionRepository,
 ) {

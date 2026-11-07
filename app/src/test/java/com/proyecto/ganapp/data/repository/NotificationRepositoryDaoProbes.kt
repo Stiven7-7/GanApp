@@ -78,6 +78,10 @@ internal class ScheduleDaoProbe : ProgramacionNotificacionDao {
         calls += "delete" to id
     }
 
+    override suspend fun deleteByAnimal(animalId: Long) {
+        calls += "deleteAnimal" to animalId
+    }
+
     override suspend fun getByAnimal(animalId: Long): List<ProgramacionNotificacionEntity> {
         calls += "animal" to animalId
         return entities

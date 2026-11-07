@@ -3,7 +3,7 @@ package com.proyecto.ganapp.core.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationAlarmsUseCase
+import com.proyecto.ganapp.domain.usecase.notificacion.ReconcileNotificationScheduleAlarmsUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.ZoneId
 import javax.inject.Inject
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 class NotificationTimeZoneReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var reconcileNotificationAlarmsUseCase: ReconcileNotificationAlarmsUseCase
+    lateinit var reconcileNotificationScheduleAlarmsUseCase: ReconcileNotificationScheduleAlarmsUseCase
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_TIMEZONE_CHANGED) {
@@ -28,7 +28,7 @@ class NotificationTimeZoneReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                reconcileNotificationAlarmsUseCase(
+                reconcileNotificationScheduleAlarmsUseCase(
                     now = now,
                     zoneId = zoneId,
                 )

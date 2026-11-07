@@ -7,10 +7,11 @@ import com.proyecto.ganapp.data.local.db.MIGRATION_6_7
 import com.proyecto.ganapp.data.local.db.MIGRATION_7_8
 import com.proyecto.ganapp.data.local.db.MIGRATION_8_9
 import com.proyecto.ganapp.data.local.db.MIGRATION_9_10
+import com.proyecto.ganapp.data.local.db.MIGRATION_10_11
 import com.proyecto.ganapp.data.local.dao.AnimalDao
+import com.proyecto.ganapp.data.local.dao.PlantillaNotificacionDao
+import com.proyecto.ganapp.data.local.dao.ProgramacionNotificacionDao
 import com.proyecto.ganapp.data.local.dao.UsuarioDao
-import com.proyecto.ganapp.data.local.dao.NotificacionDao
-import com.proyecto.ganapp.data.local.dao.NotificacionxAnimalDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -35,6 +36,7 @@ object DatabaseModule {
                 MIGRATION_7_8,
                 MIGRATION_8_9,
                 MIGRATION_9_10,
+                MIGRATION_10_11,
             )
             .build()
     }
@@ -46,8 +48,10 @@ object DatabaseModule {
     fun provideAnimalDao(db: AppDatabase): AnimalDao = db.animalDao()
 
     @Provides
-    fun provideNotificacionDao(db: AppDatabase): NotificacionDao = db.notificacionDao()
+    fun providePlantillaNotificacionDao(db: AppDatabase): PlantillaNotificacionDao =
+        db.plantillaNotificacionDao()
 
     @Provides
-    fun provideNotificacionxAnimalDao(db: AppDatabase): NotificacionxAnimalDao = db.notificacionxAnimalDao()
+    fun provideProgramacionNotificacionDao(db: AppDatabase): ProgramacionNotificacionDao =
+        db.programacionNotificacionDao()
 }

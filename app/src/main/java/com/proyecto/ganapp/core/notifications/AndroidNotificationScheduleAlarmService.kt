@@ -7,10 +7,10 @@ import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
 import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
 import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-/** Infraestructura aditiva; sin binding productivo ni conexión a los flujos legacy. */
-class AndroidNotificationScheduleAlarmService(
+class AndroidNotificationScheduleAlarmService @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : NotificationScheduleAlarmService {
     override fun schedule(scheduleId: Long, triggerAtMillis: Long): ScheduleAlarmResult {

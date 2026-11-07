@@ -15,7 +15,12 @@ object NotificationHelper {
 
     private const val CHANNEL_ID = "ganapp_channel"
 
-    fun show(context: Context, title: String, message: String) {
+    fun show(
+        context: Context,
+        title: String,
+        message: String,
+        notificationId: Int = System.currentTimeMillis().toInt(),
+    ) {
         // Crear canal si hace falta
         createChannel(context)
 
@@ -38,7 +43,7 @@ object NotificationHelper {
             .build()
 
         with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), notification)
+            notify(notificationId, notification)
         }
     }
 

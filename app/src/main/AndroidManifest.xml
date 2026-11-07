@@ -28,11 +28,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Target técnico inerte del scheduler de Programaciones, aún sin cutover. -->
         <receiver
             android:name=".core.notifications.NotificationScheduleAlarmReceiver"
             android:exported="false" />
-        <!-- 👇 ESTE ES EL RECEIVER QUE DISPARA LA NOTIFICACIÓN -->
         <receiver
             android:name=".core.notifications.NotificationReceiver"
             android:exported="false" />

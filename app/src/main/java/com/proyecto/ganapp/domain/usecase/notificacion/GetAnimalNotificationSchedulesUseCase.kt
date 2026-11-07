@@ -5,10 +5,11 @@ import com.proyecto.ganapp.domain.repository.AnimalRepository
 import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
 import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.repository.SessionRepository
+import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.first
 
-class GetAnimalNotificationSchedulesUseCase(
+class GetAnimalNotificationSchedulesUseCase @Inject constructor(
     private val repository: NotificationScheduleRepository,
     private val templateRepository: NotificationTemplateRepository,
     private val animalRepository: AnimalRepository,

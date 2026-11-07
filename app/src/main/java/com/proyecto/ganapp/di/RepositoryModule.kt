@@ -1,13 +1,17 @@
 package com.proyecto.ganapp.di
 
 import com.proyecto.ganapp.data.repository.impl.AnimalRepositoryImpl
+import com.proyecto.ganapp.data.repository.impl.AnimalScheduleDeletionRepositoryImpl
+import com.proyecto.ganapp.data.repository.impl.NotificationScheduleRepositoryImpl
+import com.proyecto.ganapp.data.repository.impl.NotificationTemplateRepositoryImpl
 import com.proyecto.ganapp.data.repository.impl.SessionRepositoryImpl
 import com.proyecto.ganapp.data.repository.impl.UsuarioRepositoryImpl
-import com.proyecto.ganapp.data.repository.impl.NotificacionRepositoryImpl
 import com.proyecto.ganapp.domain.repository.AnimalRepository
+import com.proyecto.ganapp.domain.repository.AnimalScheduleDeletionRepository
+import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
+import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
-import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -32,9 +36,21 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindNotificacionRepository(
-        impl: NotificacionRepositoryImpl
-    ): NotificacionRepository
+    abstract fun bindNotificationTemplateRepository(
+        impl: NotificationTemplateRepositoryImpl,
+    ): NotificationTemplateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationScheduleRepository(
+        impl: NotificationScheduleRepositoryImpl,
+    ): NotificationScheduleRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAnimalScheduleDeletionRepository(
+        impl: AnimalScheduleDeletionRepositoryImpl,
+    ): AnimalScheduleDeletionRepository
 
     @Binds
     @Singleton

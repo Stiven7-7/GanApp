@@ -3,7 +3,6 @@ package com.proyecto.ganapp.di
 import com.proyecto.ganapp.domain.repository.AnimalRepository
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
-import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalsUseCase
 import com.proyecto.ganapp.domain.usecase.animal.InsertAnimalUseCase
 import com.proyecto.ganapp.domain.usecase.session.ClearSessionUseCase
@@ -11,9 +10,6 @@ import com.proyecto.ganapp.domain.usecase.session.ObserveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.session.SaveSessionUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.LoginUseCase
 import com.proyecto.ganapp.domain.usecase.usuario.RegisterUserUseCase
-import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
-import com.proyecto.ganapp.domain.usecase.notificacion.GetNotificationsUseCase
-import com.proyecto.ganapp.domain.usecase.notificacion.ScheduleNotificationUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -78,18 +74,4 @@ object UseCaseModule {
         return ClearSessionUseCase(repository)
     }
 
-    // 🔔 Notificación UseCases
-    @Provides
-    @Singleton
-    fun provideGetNotificationsUseCase(repository: NotificacionRepository): GetNotificationsUseCase {
-        return GetNotificationsUseCase(repository)
-    }
-
-    @Provides
-    @Singleton
-    fun provideScheduleNotificationUseCase(
-        scheduler: NotificationAlarmScheduler,
-    ): ScheduleNotificationUseCase {
-        return ScheduleNotificationUseCase(scheduler)
-    }
 }

@@ -155,7 +155,7 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
-/** Preparada para v11; NO registrada en DatabaseModule ni ejecutada por AppDatabase v10. */
+/** Registrada en DatabaseModule. Conserva la lógica aprobada en 4.5A. */
 val MIGRATION_10_11 = object : Migration(10, 11) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Room ejecutará la migración en su transacción. Cualquier error debe abortarla.

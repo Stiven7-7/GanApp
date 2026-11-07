@@ -2,6 +2,8 @@ package com.proyecto.ganapp.ui.features.notifications.templates
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.proyecto.ganapp.domain.model.PlantillaNotificacion
 import com.proyecto.ganapp.domain.model.TipoNotificacion
 import com.proyecto.ganapp.domain.usecase.notificacion.*
@@ -14,8 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Preparado sin HiltViewModel ni binding: construcción explícita hasta el cutover. */
-class NotificationTemplatesViewModel(
+@HiltViewModel
+class NotificationTemplatesViewModel @Inject constructor(
     private val getTemplates: GetNotificationTemplatesUseCase,
     private val createTemplate: CreateNotificationTemplateUseCase,
     private val getTemplate: GetNotificationTemplateByIdUseCase,

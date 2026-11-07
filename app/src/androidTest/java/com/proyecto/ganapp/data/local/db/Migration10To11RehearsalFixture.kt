@@ -31,13 +31,12 @@ internal class Migration10To11RehearsalFixture(private val helper: MigrationTest
         databases.clear()
     }
 
-    /** Simula la transacción del upgrade; no usa Room v11 ni su validación autoritativa. */
+    /** Simula la transacción del upgrade. No sustituye `runMigrationsAndValidate`. */
     fun rehearse(db: SupportSQLiteDatabase, vararg migrations: Migration) {
         val path = if (migrations.isEmpty()) listOf(MIGRATION_10_11) else migrations.toList()
         db.beginTransaction()
         try {
             path.forEach { it.migrate(db) }
-            // Solo el encabezado de esta base de test; AppDatabase productivo continúa en v10.
             db.version = 11
             db.setTransactionSuccessful()
         } finally {
@@ -45,6 +44,27 @@ internal class Migration10To11RehearsalFixture(private val helper: MigrationTest
         }
         assertEquals(11, db.version)
         assertTrue(rows(db, "PRAGMA foreign_key_check").isEmpty())
+    }
+
+    /** Cierra la base sembrada y valida el resultado contra el esquema exportado v11. */
+    fun official(db: SupportSQLiteDatabase, vararg migrations: Migration): SupportSQLiteDatabase {
+        val name = databaseName(db)
+        db.close()
+        databases.remove(name)
+        val steps = if (migrations.isEmpty()) arrayOf(MIGRATION_10_11) else migrations
+        val validated = helper.runMigrationsAndValidate(name, 11, true, *steps)
+        databases[name] = validated
+        return validated
+    }
+
+    fun databaseName(db: SupportSQLiteDatabase): String =
+        databases.entries.first { it.value === db }.key
+
+    fun databaseFile(name: String) = context.getDatabasePath(name)
+
+    fun deleteDatabase(name: String) {
+        databases.remove(name)?.close()
+        context.deleteDatabase(name)
     }
 
     fun corrupt(db: SupportSQLiteDatabase, seed: () -> Unit) {

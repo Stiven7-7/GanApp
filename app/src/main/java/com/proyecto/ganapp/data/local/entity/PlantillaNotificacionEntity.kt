@@ -5,7 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Contrato físico futuro; no registrado en AppDatabase v10. */
+/** Tabla física de Plantillas en AppDatabase v11. */
 @Entity(
     tableName = "plantilla_notificacion",
     foreignKeys = [

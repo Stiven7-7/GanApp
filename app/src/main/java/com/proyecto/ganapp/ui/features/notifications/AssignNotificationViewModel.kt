@@ -6,8 +6,6 @@ import com.proyecto.ganapp.domain.model.Notificacion
 import com.proyecto.ganapp.domain.usecase.notificacion.AssignNotificationToAnimalResult
 import com.proyecto.ganapp.domain.usecase.notificacion.AssignNotificationToAnimalUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.GetNotificationsUseCase
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,8 +13,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel
-class AssignNotificationViewModel @Inject constructor(
+class AssignNotificationViewModel(
     private val getNotificationsUseCase: GetNotificationsUseCase,
     private val assignNotificationToAnimalUseCase: AssignNotificationToAnimalUseCase,
 ) : ViewModel() {

@@ -2,6 +2,10 @@ package com.proyecto.ganapp.ui.features.notifications.scheduling
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
+import dagger.hilt.android.lifecycle.HiltViewModel
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.CreateAnimalNotificationScheduleRequest
@@ -21,15 +25,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Preparado sin HiltViewModel ni binding: el animal llega del flujo y la sesión queda en los use cases. */
-class AnimalNotificationScheduleViewModel(
-    private val animalId: Long,
+@HiltViewModel(assistedFactory = AnimalNotificationScheduleViewModel.Factory::class)
+class AnimalNotificationScheduleViewModel @AssistedInject constructor(
+    @Assisted private val animalId: Long,
     private val getAnimal: GetAnimalByIdUseCase,
     private val getTemplates: GetNotificationTemplatesUseCase,
     private val createSchedule: CreateAnimalNotificationScheduleUseCase,
-    private val nowMillis: () -> Long = { System.currentTimeMillis() },
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    @Assisted private val nowMillis: () -> Long,
+    @Assisted private val zoneId: ZoneId,
 ) : ViewModel() {
+    @AssistedFactory
+    interface Factory {
+        fun create(
+            animalId: Long,
+            nowMillis: () -> Long,
+            zoneId: ZoneId,
+        ): AnimalNotificationScheduleViewModel
+    }
+
     private val _uiState = MutableStateFlow(AnimalNotificationScheduleUiState())
     val uiState = _uiState.asStateFlow()
     private val _events = MutableSharedFlow<AnimalScheduleEvent>(extraBufferCapacity = 1)

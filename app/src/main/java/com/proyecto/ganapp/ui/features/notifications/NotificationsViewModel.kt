@@ -9,8 +9,6 @@ import com.proyecto.ganapp.domain.usecase.notificacion.CreateAndScheduleNotifica
 import com.proyecto.ganapp.domain.usecase.notificacion.CreateNotificationRequest
 import com.proyecto.ganapp.domain.usecase.notificacion.CreateNotificationResult
 import com.proyecto.ganapp.domain.usecase.notificacion.GetNotificationsUseCase
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +16,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel
-class NotificationsViewModel @Inject constructor(
+class NotificationsViewModel(
     private val getNotificationsUseCase: GetNotificationsUseCase,
     private val createAndScheduleNotificationUseCase: CreateAndScheduleNotificationUseCase,
 ) : ViewModel() {
