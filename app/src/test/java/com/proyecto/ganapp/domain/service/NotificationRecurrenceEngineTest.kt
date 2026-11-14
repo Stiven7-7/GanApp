@@ -1,9 +1,6 @@
 package com.proyecto.ganapp.domain.service
 
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
-import com.proyecto.ganapp.domain.model.TipoNotificacion
-import com.proyecto.ganapp.domain.usecase.notificacion.CreateNotificationRequest
-import com.proyecto.ganapp.domain.usecase.notificacion.CreateNotificationValidator
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -355,26 +352,21 @@ class NotificationRecurrenceEngineTest {
     }
 
     @Test
-    fun primeraOcurrencia_coincideConElValidadorDe10A() {
+    fun primeraOcurrencia_esLaHoraIndicadaEnLaZonaDelSistema() {
         val validatorZone = ZoneId.systemDefault()
         val start = day("2026-06-15", validatorZone)
-        val request = CreateNotificationRequest(
-            nombre = "Vacuna",
-            tipo = TipoNotificacion.VACUNACION,
-            fechaInicio = start,
-            fechaFin = start,
-            hora = "08:30",
-            recurrencia = RecurrenciaNotificacion.NO,
-            idUsuario = 1L,
-        )
-        val first = CreateNotificationValidator.firstOccurrence(request)
+        val first = LocalDate.ofEpochDay(start)
+            .atTime(LocalTime.of(8, 30))
+            .atZone(validatorZone)
+            .toInstant()
+            .toEpochMilli()
 
         val result = NotificationRecurrenceEngine.nextOccurrence(
             RecurrenciaNotificacion.NO,
             start,
             start,
             "08:30",
-            first!! - 1L,
+            first - 1L,
             validatorZone,
         )
 

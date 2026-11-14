@@ -1,15 +1,9 @@
 package com.proyecto.ganapp.ui.features.auth
 
-import com.proyecto.ganapp.domain.model.Notificacion
-import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
-import com.proyecto.ganapp.domain.model.NotificationCancelResult
-import com.proyecto.ganapp.domain.model.NotificationScheduleResult
 import com.proyecto.ganapp.domain.model.Usuario
-import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
-import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
 import com.proyecto.ganapp.domain.model.PlantillaNotificacion
 import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
 import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
@@ -51,14 +45,14 @@ class AuthViewModelTest {
 
     private lateinit var repository: FakeUsuarioRepository
     private lateinit var sessionRepository: FakeSessionRepository
-    private lateinit var notificationRepository: AuthActivationNotificacionRepository
+    private lateinit var notificationRepository: AuthActivationProbe
     private lateinit var viewModel: AuthViewModel
 
     @Before
     fun setUp() {
         repository = FakeUsuarioRepository()
         sessionRepository = FakeSessionRepository()
-        notificationRepository = AuthActivationNotificacionRepository()
+        notificationRepository = AuthActivationProbe()
         viewModel = AuthViewModel(
             loginUseCase = LoginUseCase(repository),
             registerUserUseCase = RegisterUserUseCase(repository),
@@ -1038,34 +1032,7 @@ class AuthViewModelTest {
     }
 }
 
-private class AuthActivationNotificacionRepository : NotificacionRepository {
+private class AuthActivationProbe {
     var calls: Int = 0
     var error: Throwable? = null
-
-    override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> {
-        calls += 1
-        val failure = error
-        if (failure != null) {
-            return flow { throw failure }
-        }
-        return flowOf(emptyList())
-    }
-
-    override suspend fun insertNotification(notificacion: Notificacion): Long = 0L
-
-    override suspend fun updateNotification(notificacion: Notificacion) = Unit
-
-    override suspend fun deleteNotification(id: Long) = Unit
-
-    override suspend fun getNotificationById(id: Long): Notificacion? = null
-}
-
-private class AuthActivationNotificationScheduler : NotificationAlarmScheduler {
-    override fun scheduleNext(request: NotificationAlarmRequest): NotificationScheduleResult {
-        return NotificationScheduleResult.Scheduled(request.notificationId, request.triggerAtMillis)
-    }
-
-    override fun cancel(notificationId: Long): NotificationCancelResult {
-        return NotificationCancelResult.Cancelled(notificationId)
-    }
 }

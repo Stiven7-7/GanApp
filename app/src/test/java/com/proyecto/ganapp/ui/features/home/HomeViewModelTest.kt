@@ -2,18 +2,12 @@ package com.proyecto.ganapp.ui.features.home
 
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.EspecieAnimal
-import com.proyecto.ganapp.domain.model.Notificacion
-import com.proyecto.ganapp.domain.model.NotificationAlarmRequest
-import com.proyecto.ganapp.domain.model.NotificationCancelResult
-import com.proyecto.ganapp.domain.model.NotificationScheduleResult
 import com.proyecto.ganapp.domain.model.Usuario
 import com.proyecto.ganapp.domain.repository.AnimalRepository
-import com.proyecto.ganapp.domain.repository.NotificacionRepository
 import com.proyecto.ganapp.domain.repository.RegisterUserRepositoryResult
 import com.proyecto.ganapp.domain.repository.SessionRepository
 import com.proyecto.ganapp.domain.repository.UsuarioRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetFavoriteAnimalsUseCase
-import com.proyecto.ganapp.domain.service.NotificationAlarmScheduler
 import com.proyecto.ganapp.domain.model.PlantillaNotificacion
 import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
 import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
@@ -446,27 +440,5 @@ class HomeViewModelTest {
         override suspend fun updateAnimal(animal: Animal): Boolean = error("unused")
 
         override suspend fun deleteAnimal(id: Long) = error("unused")
-    }
-}
-
-private class HomeAlarmNotificacionRepository : NotificacionRepository {
-    override fun getAllNotifications(userId: Long): Flow<List<Notificacion>> = flowOf(emptyList())
-
-    override suspend fun insertNotification(notificacion: Notificacion): Long = 0L
-
-    override suspend fun updateNotification(notificacion: Notificacion) = Unit
-
-    override suspend fun deleteNotification(id: Long) = Unit
-
-    override suspend fun getNotificationById(id: Long): Notificacion? = null
-}
-
-private class HomeAlarmNotificationScheduler : NotificationAlarmScheduler {
-    override fun scheduleNext(request: NotificationAlarmRequest): NotificationScheduleResult {
-        error("Unexpected call to scheduleNext")
-    }
-
-    override fun cancel(notificationId: Long): NotificationCancelResult {
-        return NotificationCancelResult.Cancelled(notificationId)
     }
 }
