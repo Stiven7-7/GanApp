@@ -1,18 +1,29 @@
 package com.proyecto.ganapp.ui.features.notifications.animalschedules
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Grass
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Vaccines
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,18 +31,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.proyecto.ganapp.domain.model.Animal
 import com.proyecto.ganapp.domain.model.ProgramacionNotificacionDetalle
+import com.proyecto.ganapp.domain.model.TipoNotificacion
 import com.proyecto.ganapp.ui.common.ganAppTopAppBarColors
 import com.proyecto.ganapp.ui.common.theme.GanAppSpacing
 import com.proyecto.ganapp.ui.features.animals.animalSpeciesLabel
@@ -86,12 +102,30 @@ fun AnimalSchedulesScreen(
             if (animal != null) item { AnimalSchedulesContextCard(animal) }
             when (state) {
                 AnimalSchedulesContent.Loading -> item {
-                    CircularProgressIndicator(Modifier.semantics { contentDescription = "Cargando programaciones" })
+                    Box(
+                        Modifier.fillMaxWidth().padding(vertical = GanAppSpacing.xl),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            Modifier.semantics { contentDescription = "Cargando programaciones" },
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
-                is AnimalSchedulesContent.Empty -> item { Text(AnimalSchedulesEmptyMessage) }
+                is AnimalSchedulesContent.Empty -> item {
+                    Text(
+                        AnimalSchedulesEmptyMessage,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 is AnimalSchedulesContent.Error -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
-                        Text(state.message, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            state.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                         Button(onClick = onRetry, modifier = Modifier.heightIn(min = GanAppSpacing.xxl)) {
                             Text("Reintentar")
                         }
@@ -110,15 +144,25 @@ fun AnimalSchedulesScreen(
 
 @Composable
 private fun AnimalSchedulesContextCard(animal: Animal) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             Modifier.padding(GanAppSpacing.md).semantics {
                 contentDescription = "Animal ${animal.nombre}, ${animalSpeciesLabel(animal.especie)}"
             },
             verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
         ) {
-            Text(animal.nombre, style = MaterialTheme.typography.titleMedium)
-            Text(animalSpeciesLabel(animal.especie), style = MaterialTheme.typography.bodyMedium)
+            Text(animal.nombre, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                animalSpeciesLabel(animal.especie),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -126,19 +170,86 @@ private fun AnimalSchedulesContextCard(animal: Animal) {
 @Composable
 private fun ScheduleDetailCard(detail: ProgramacionNotificacionDetalle) {
     val schedule = detail.programacion
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             Modifier.padding(GanAppSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs),
+            verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
         ) {
-            Text(detail.plantilla.titulo, style = MaterialTheme.typography.titleMedium)
-            Text(detail.plantilla.tipo.toPersistentString(), style = MaterialTheme.typography.bodyMedium)
-            Text("Fecha inicio ${schedule.fechaInicio.format(DateFormat)}")
-            Text("Fecha fin ${schedule.fechaFin.format(DateFormat)}")
-            Text("Hora ${schedule.hora.format(TimeFormat)}")
-            Text(schedule.recurrencia.toPersistentString())
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ScheduleTypeBadge(detail.plantilla.tipo)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xs)) {
+                    Text(
+                        detail.plantilla.titulo,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    ScheduleTypeLabel(detail.plantilla.tipo.toPersistentString())
+                }
+            }
+            ScheduleFact(Icons.Outlined.CalendarMonth, "Fecha inicio", schedule.fechaInicio.format(DateFormat))
+            ScheduleFact(Icons.Outlined.CalendarMonth, "Fecha fin", schedule.fechaFin.format(DateFormat))
+            ScheduleFact(Icons.Outlined.Schedule, "Hora", schedule.hora.format(TimeFormat))
+            ScheduleFact(Icons.Outlined.Autorenew, "Recurrencia", schedule.recurrencia.toPersistentString())
         }
     }
+}
+
+@Composable
+private fun ScheduleFact(icon: ImageVector, label: String, value: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(GanAppSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+@Composable
+private fun ScheduleTypeBadge(type: TipoNotificacion) {
+    Surface(
+        modifier = Modifier.size(GanAppSpacing.xxl),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(type.scheduleListIcon(), contentDescription = null)
+        }
+    }
+}
+
+@Composable
+private fun ScheduleTypeLabel(label: String) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = GanAppSpacing.sm, vertical = GanAppSpacing.xxs),
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
+
+private fun TipoNotificacion.scheduleListIcon(): ImageVector = when (this) {
+    TipoNotificacion.VACUNACION -> Icons.Outlined.Vaccines
+    TipoNotificacion.ALIMENTACION -> Icons.Outlined.Grass
+    TipoNotificacion.CICLO_REPRODUCTIVO -> Icons.Outlined.Autorenew
 }
 
 private val DateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
