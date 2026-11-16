@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,10 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Vaccines
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -31,12 +36,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -60,7 +70,21 @@ fun AnimalSchedulesRoute(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
-    AnimalSchedulesScreen(state = state, onBack = { leaveAnimalSchedules(onBack) }, onRetry = viewModel::load)
+    val deletion by viewModel.deletion.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { snackbar.showSnackbar(it) }
+    }
+    AnimalSchedulesScreen(
+        state = state,
+        deletion = deletion,
+        snackbar = snackbar,
+        onBack = { leaveAnimalSchedules(onBack) },
+        onRetry = viewModel::load,
+        onDelete = viewModel::requestDelete,
+        onConfirmDelete = viewModel::confirmDelete,
+        onDismissDelete = viewModel::dismissDelete,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,9 +93,15 @@ fun AnimalSchedulesScreen(
     state: AnimalSchedulesContent,
     onBack: () -> Unit,
     onRetry: () -> Unit,
+    deletion: AnimalScheduleDeletionUi = AnimalScheduleDeletionUi(),
+    snackbar: SnackbarHostState = remember { SnackbarHostState() },
+    onDelete: (ProgramacionNotificacionDetalle) -> Unit = {},
+    onConfirmDelete: () -> Unit = {},
+    onDismissDelete: () -> Unit = {},
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Programaciones del animal", textAlign = TextAlign.Center) },
@@ -135,10 +165,31 @@ fun AnimalSchedulesScreen(
                     state.schedules,
                     key = { it.programacion.idProgramacion },
                 ) { detail ->
-                    ScheduleDetailCard(detail)
+                    ScheduleDetailCard(
+                        detail = detail,
+                        enabled = !deletion.isDeleting,
+                        onDelete = { onDelete(detail) },
+                    )
                 }
             }
         }
+    }
+    deletion.target?.let { detail ->
+        AlertDialog(
+            onDismissRequest = { if (!deletion.isDeleting) onDismissDelete() },
+            title = { Text("Eliminar programación") },
+            text = { Text("¿Quieres eliminar la programación de ${detail.plantilla.titulo}?") },
+            confirmButton = {
+                TextButton(onClick = onConfirmDelete, enabled = !deletion.isDeleting) {
+                    Text(if (deletion.isDeleting) "Eliminando…" else "Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissDelete, enabled = !deletion.isDeleting) {
+                    Text("Cancelar")
+                }
+            },
+        )
     }
 }
 
@@ -168,7 +219,11 @@ private fun AnimalSchedulesContextCard(animal: Animal) {
 }
 
 @Composable
-private fun ScheduleDetailCard(detail: ProgramacionNotificacionDetalle) {
+private fun ScheduleDetailCard(
+    detail: ProgramacionNotificacionDetalle,
+    enabled: Boolean,
+    onDelete: () -> Unit,
+) {
     val schedule = detail.programacion
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -199,6 +254,22 @@ private fun ScheduleDetailCard(detail: ProgramacionNotificacionDetalle) {
             ScheduleFact(Icons.Outlined.CalendarMonth, "Fecha fin", schedule.fechaFin.format(DateFormat))
             ScheduleFact(Icons.Outlined.Schedule, "Hora", schedule.hora.format(TimeFormat))
             ScheduleFact(Icons.Outlined.Autorenew, "Recurrencia", schedule.recurrencia.toPersistentString())
+            TextButton(
+                onClick = onDelete,
+                enabled = enabled,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics {
+                        contentDescription = "Eliminar programación: ${detail.plantilla.titulo}"
+                    },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Icon(Icons.Outlined.Delete, contentDescription = null)
+                Spacer(Modifier.width(GanAppSpacing.xs))
+                Text("Eliminar")
+            }
         }
     }
 }

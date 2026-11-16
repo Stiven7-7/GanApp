@@ -15,3 +15,8 @@ sealed interface AnimalSchedulesContent {
         val schedules: List<ProgramacionNotificacionDetalle>,
     ) : AnimalSchedulesContent
 }
+
+data class AnimalScheduleDeletionUi(
+    val target: ProgramacionNotificacionDetalle? = null,
+    val isDeleting: Boolean = false,
+)

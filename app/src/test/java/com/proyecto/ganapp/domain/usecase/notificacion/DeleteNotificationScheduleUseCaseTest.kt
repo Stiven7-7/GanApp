@@ -66,6 +66,17 @@ class DeleteNotificationScheduleUseCaseTest {
     }
 
     @Test
+    fun eliminaUnaDeDosDeLaMismaPlantillaYConservaLaOtra() = runTest {
+        val f = ScheduleTestFixture()
+        f.schedules[78L] = f.schedule(id = 78L)
+        assertEquals(DeleteNotificationScheduleResult.Success, f.delete(77L))
+        assertNull(f.schedules[77L])
+        assertNotNull(f.schedules[78L])
+        assertEquals(listOf(77L), f.cancelled)
+        assertEquals(listOf(77L), f.deleted)
+    }
+
+    @Test
     fun successCancelaAntesDeEliminarPorMismoId() = runTest {
         val f = ScheduleTestFixture()
         f.activeAlarms[77L] = f.now

@@ -1,9 +1,12 @@
 package com.proyecto.ganapp.domain.usecase.notificacion
 
+import com.proyecto.ganapp.domain.model.Animal
+import com.proyecto.ganapp.domain.model.EspecieAnimal
 import com.proyecto.ganapp.domain.model.PlantillaNotificacion
 import com.proyecto.ganapp.domain.model.ProgramacionNotificacion
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
 import com.proyecto.ganapp.domain.model.TipoNotificacion
+import com.proyecto.ganapp.domain.repository.AnimalRepository
 import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
 import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
@@ -31,10 +34,26 @@ class HandleNotificationScheduleAlarmUseCaseTest {
         useCase.armNext(15L, firedAt, zone)
 
         val display = prepared as HandleNotificationScheduleAlarmResult.Display
-        assertEquals("Refuerzo", display.title)
-        assertEquals("Vacunación", display.message)
+        assertEquals("Mancha · Vacunación", display.title)
+        assertEquals("Refuerzo", display.message)
         assertEquals(listOf(15L), alarms.scheduledIds)
         assertTrue(alarms.scheduledIds.none { it == 10L })
+    }
+
+    @Test
+    fun sinAnimalHistoricoPublicaTipoYTituloSinInventarNombre() = runTest {
+        val useCase = useCase(AlarmProbe(), templateTitle = "Vacuna Parásitos", scheduleId = 15L, animalId = null)
+        val display = useCase.prepare(15L, firedAt, zone) as HandleNotificationScheduleAlarmResult.Display
+        assertEquals("Vacunación", display.title)
+        assertEquals("Vacuna Parásitos", display.message)
+    }
+
+    @Test
+    fun animalIlegibleNoImpideElDisparo() = runTest {
+        val useCase = useCase(AlarmProbe(), templateTitle = "Refuerzo", scheduleId = 15L, animalMissing = true)
+        val display = useCase.prepare(15L, firedAt, zone) as HandleNotificationScheduleAlarmResult.Display
+        assertEquals("Vacunación", display.title)
+        assertEquals("Refuerzo", display.message)
     }
 
     @Test
@@ -46,12 +65,18 @@ class HandleNotificationScheduleAlarmUseCaseTest {
         assertTrue(alarms.scheduledIds.isEmpty())
     }
 
-    private fun useCase(alarms: AlarmProbe, templateTitle: String, scheduleId: Long?): HandleNotificationScheduleAlarmUseCase {
+    private fun useCase(
+        alarms: AlarmProbe,
+        templateTitle: String,
+        scheduleId: Long?,
+        animalId: Long? = 7L,
+        animalMissing: Boolean = false,
+    ): HandleNotificationScheduleAlarmUseCase {
         val schedule = scheduleId?.let {
             ProgramacionNotificacion(
                 idProgramacion = it,
                 idPlantilla = 10L,
-                idAnimal = 7L,
+                idAnimal = animalId,
                 fechaInicio = LocalDate.of(2026, 6, 15),
                 fechaFin = LocalDate.of(2026, 6, 16),
                 hora = LocalTime.of(8, 0),
@@ -75,6 +100,28 @@ class HandleNotificationScheduleAlarmUseCaseTest {
                 override suspend fun updateTemplate(template: PlantillaNotificacion) = false
                 override suspend fun deleteTemplate(templateId: Long) = Unit
                 override suspend fun hasSchedules(templateId: Long) = false
+            },
+            animalRepository = object : AnimalRepository {
+                override fun getAllAnimals(userId: Long) = flowOf(emptyList<Animal>())
+                override fun getAnimalsByUser(userId: Long) = flowOf(emptyList<Animal>())
+                override fun getFavoriteAnimalsByUser(userId: Long) = flowOf(emptyList<Animal>())
+                override suspend fun getAnimalById(id: Long): Animal? {
+                    if (animalMissing) throw IllegalStateException("animal")
+                    return Animal(
+                        idAnimal = id,
+                        especie = EspecieAnimal.VACA,
+                        nombre = "Mancha",
+                        raza = "Holstein",
+                        edad = null,
+                        peso = null,
+                        color = null,
+                        fotoUri = null,
+                        idUsuario = 1L,
+                    )
+                }
+                override suspend fun insertAnimal(animal: Animal) = 0L
+                override suspend fun updateAnimal(animal: Animal) = false
+                override suspend fun deleteAnimal(id: Long) = Unit
             },
             alarmService = alarms,
         )

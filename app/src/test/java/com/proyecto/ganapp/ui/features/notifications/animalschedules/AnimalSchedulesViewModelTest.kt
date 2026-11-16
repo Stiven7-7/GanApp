@@ -11,12 +11,18 @@ import com.proyecto.ganapp.domain.repository.AnimalRepository
 import com.proyecto.ganapp.domain.repository.NotificationScheduleRepository
 import com.proyecto.ganapp.domain.repository.NotificationTemplateRepository
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
+import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
+import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
+import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
+import com.proyecto.ganapp.domain.usecase.notificacion.DeleteNotificationScheduleUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.GetAnimalNotificationSchedulesUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.TemplateSessionProbe
 import com.proyecto.ganapp.testutil.MainDispatcherRule
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -47,10 +53,26 @@ class AnimalSchedulesViewModelTest {
         val animals = AnimalReadProbe(animal)
         val listed = ScheduleReadProbe(schedules, failList)
         val templates = TemplateReadProbe(template)
+        val deleteGate = CompletableDeferred<Unit>()
+        var deleteCalls = 0
+        var holdDelete = false
+        var failPersist = false
+        val alarms = AlarmDeleteProbe()
+        val deleteRepository = object : NotificationScheduleRepository by listed {
+            override suspend fun deleteSchedule(scheduleId: Long) {
+                deleteCalls += 1
+                if (holdDelete) deleteGate.await()
+                if (failPersist) throw IllegalStateException("room")
+                listed.remove(scheduleId)
+            }
+        }
         val vm = AnimalSchedulesViewModel(
             animalId = animalId,
             getSchedules = GetAnimalNotificationSchedulesUseCase(listed, templates, animals, session),
             getAnimal = GetAnimalByIdUseCase(animals, session),
+            deleteSchedule = DeleteNotificationScheduleUseCase(
+                deleteRepository, templates, animals, session, alarms,
+            ),
         ).also { viewModel -> stores += ViewModelStore().apply { put("schedules", viewModel) } }
     }
 
@@ -128,6 +150,83 @@ class AnimalSchedulesViewModelTest {
         assertTrue(mismatch.listed.animalIds.isEmpty())
     }
 
+    @Test fun confirmDeleteRemovesOnlyTheSelectedSchedule() = runTest(main.testDispatcher) {
+        val f = Fixture()
+        advanceUntilIdle()
+        val success = f.vm.uiState.value as AnimalSchedulesContent.Success
+        f.vm.requestDelete(success.schedules.first())
+        f.vm.confirmDelete()
+        advanceUntilIdle()
+        val updated = f.vm.uiState.value as AnimalSchedulesContent.Success
+        assertEquals(listOf(78L), updated.schedules.map { it.programacion.idProgramacion })
+        assertEquals(listOf(77L), f.alarms.cancelled)
+        assertEquals(1, f.deleteCalls)
+        assertEquals(null, f.vm.deletion.value.target)
+    }
+
+    @Test fun dismissDeleteDoesNothing() = runTest(main.testDispatcher) {
+        val f = Fixture()
+        advanceUntilIdle()
+        val success = f.vm.uiState.value as AnimalSchedulesContent.Success
+        f.vm.requestDelete(success.schedules.first())
+        f.vm.dismissDelete()
+        assertEquals(null, f.vm.deletion.value.target)
+        assertEquals(0, f.deleteCalls)
+        assertTrue(f.alarms.cancelled.isEmpty())
+    }
+
+    @Test fun deletingStateBlocksASecondConfirm() = runTest(main.testDispatcher) {
+        val f = Fixture()
+        f.holdDelete = true
+        advanceUntilIdle()
+        val success = f.vm.uiState.value as AnimalSchedulesContent.Success
+        f.vm.requestDelete(success.schedules.first())
+        f.vm.confirmDelete()
+        advanceUntilIdle()
+        assertTrue(f.vm.deletion.value.isDeleting)
+        f.vm.confirmDelete()
+        f.deleteGate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(1, f.deleteCalls)
+        assertFalse(f.vm.deletion.value.isDeleting)
+    }
+
+    @Test fun alarmFailureKeepsTheScheduleAndReportsIt() = runTest(main.testDispatcher) {
+        val f = Fixture()
+        val messages = mutableListOf<String>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            f.vm.messages.collect { messages += it }
+        }
+        advanceUntilIdle()
+        f.alarms.fail = true
+        val success = f.vm.uiState.value as AnimalSchedulesContent.Success
+        f.vm.requestDelete(success.schedules.first())
+        f.vm.confirmDelete()
+        advanceUntilIdle()
+        val still = f.vm.uiState.value as AnimalSchedulesContent.Success
+        assertEquals(listOf(77L, 78L), still.schedules.map { it.programacion.idProgramacion })
+        assertEquals(0, f.deleteCalls)
+        assertEquals("No se pudo cancelar la alarma. La programación se conservó.", messages.single())
+    }
+
+    @Test fun persistenceFailureDoesNotReportSuccess() = runTest(main.testDispatcher) {
+        val f = Fixture()
+        val messages = mutableListOf<String>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            f.vm.messages.collect { messages += it }
+        }
+        f.failPersist = true
+        advanceUntilIdle()
+        val success = f.vm.uiState.value as AnimalSchedulesContent.Success
+        f.vm.requestDelete(success.schedules.first())
+        f.vm.confirmDelete()
+        advanceUntilIdle()
+        val still = f.vm.uiState.value as AnimalSchedulesContent.Success
+        assertEquals(listOf(77L, 78L), still.schedules.map { it.programacion.idProgramacion })
+        assertEquals("No se pudo eliminar la programación.", messages.single())
+        assertFalse(messages.any { it.contains("eliminada") })
+    }
+
     @Test fun backInvokesCallbackWithoutNavigationState() = runTest(main.testDispatcher) {
         var backed = 0
         leaveAnimalSchedules { backed++ }
@@ -166,6 +265,17 @@ private fun schedule(
     recurrencia = recurrencia,
 )
 
+private class AlarmDeleteProbe : NotificationScheduleAlarmService {
+    val cancelled = mutableListOf<Long>()
+    var fail = false
+    override fun schedule(scheduleId: Long, triggerAtMillis: Long) = ScheduleAlarmResult.Scheduled
+    override fun cancel(scheduleId: Long): ScheduleAlarmCancelResult {
+        cancelled += scheduleId
+        return if (fail) ScheduleAlarmCancelResult.Failure(IllegalStateException("alarm"))
+        else ScheduleAlarmCancelResult.Cancelled
+    }
+}
+
 private class AnimalReadProbe(private val animal: Animal?) : AnimalRepository {
     var reads = 0
     override fun getAllAnimals(userId: Long): Flow<List<Animal>> = flowOf(emptyList())
@@ -181,18 +291,23 @@ private class AnimalReadProbe(private val animal: Animal?) : AnimalRepository {
 }
 
 private class ScheduleReadProbe(
-    private val schedules: List<ProgramacionNotificacion>,
+    schedules: List<ProgramacionNotificacion>,
     private val fail: Boolean,
 ) : NotificationScheduleRepository {
+    val rows = schedules.toMutableList()
     val animalIds = mutableListOf<Long>()
+    fun remove(scheduleId: Long) {
+        rows.removeAll { it.idProgramacion == scheduleId }
+    }
     override suspend fun insertSchedule(schedule: ProgramacionNotificacion): Long = 0L
-    override suspend fun getScheduleById(scheduleId: Long): ProgramacionNotificacion? = null
+    override suspend fun getScheduleById(scheduleId: Long): ProgramacionNotificacion? =
+        rows.firstOrNull { it.idProgramacion == scheduleId }
     override suspend fun updateSchedule(schedule: ProgramacionNotificacion): Boolean = false
     override suspend fun deleteSchedule(scheduleId: Long) = Unit
     override suspend fun getSchedulesByAnimal(animalId: Long): List<ProgramacionNotificacion> {
         animalIds += animalId
         if (fail) throw IllegalStateException("list")
-        return schedules
+        return rows.toList()
     }
     override suspend fun getSchedulesByTemplate(templateId: Long): List<ProgramacionNotificacion> = emptyList()
 }
