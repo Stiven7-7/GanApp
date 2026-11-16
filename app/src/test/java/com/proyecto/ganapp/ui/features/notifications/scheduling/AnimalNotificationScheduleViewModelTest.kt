@@ -97,6 +97,20 @@ class AnimalNotificationScheduleViewModelTest {
         assertEquals(listOf(11L, 12L), ready.templates.map { it.idPlantilla })
     }
 
+    @Test fun scheduleSelectionOmitsReproductiveCycleTemplates() = runTest(main.testDispatcher) {
+        val f = Fixture(
+            templates = listOf(
+                template(11L),
+                template(13L, "Celo", TipoNotificacion.CICLO_REPRODUCTIVO),
+            ),
+        )
+        advanceUntilIdle()
+        val ready = f.vm.uiState.value.load as AnimalScheduleLoad.Ready
+        assertEquals(listOf(11L), ready.templates.map { it.idPlantilla })
+        f.vm.selectTemplate(13L)
+        assertEquals(null, f.vm.uiState.value.selectedTemplateId)
+    }
+
     @Test fun emptyTemplatesKeepAnimalAndDisableContinue() = runTest(main.testDispatcher) {
         val f = Fixture(templates = emptyList())
         advanceUntilIdle()

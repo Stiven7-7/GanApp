@@ -63,8 +63,11 @@ class NotificationTemplatesViewModel @Inject constructor(
             try {
                 when (val result = getTemplate(templateId)) {
                     is GetNotificationTemplateByIdResult.Success -> _uiState.update {
-                        it.copy(editor = TemplateEditor(result.template.idPlantilla,
-                            TemplateForm(result.template.titulo, result.template.tipo)))
+                        it.copy(editor = TemplateEditor(
+                            result.template.idPlantilla,
+                            TemplateForm(result.template.titulo, result.template.tipo),
+                            result.template.tipo,
+                        ))
                     }
                     else -> message("No se pudo abrir la plantilla.")
                 }

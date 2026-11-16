@@ -19,7 +19,16 @@ data class TemplateForm(
 data class TemplateEditor(
     val templateId: Long? = null,
     val form: TemplateForm = TemplateForm(),
-)
+    val persistedTipo: TipoNotificacion? = null,
+) {
+    fun selectableTypes(): List<TipoNotificacion> = buildList {
+        add(TipoNotificacion.VACUNACION)
+        add(TipoNotificacion.ALIMENTACION)
+        if (persistedTipo == TipoNotificacion.CICLO_REPRODUCTIVO) {
+            add(TipoNotificacion.CICLO_REPRODUCTIVO)
+        }
+    }
+}
 
 data class NotificationTemplatesUiState(
     val content: TemplateListState = TemplateListState.Loading,

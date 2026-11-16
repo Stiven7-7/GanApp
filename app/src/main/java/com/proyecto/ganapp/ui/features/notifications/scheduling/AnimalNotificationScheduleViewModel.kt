@@ -7,6 +7,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.proyecto.ganapp.domain.model.RecurrenciaNotificacion
+import com.proyecto.ganapp.domain.model.TipoNotificacion
 import com.proyecto.ganapp.domain.usecase.animal.GetAnimalByIdUseCase
 import com.proyecto.ganapp.domain.usecase.notificacion.CreateAnimalNotificationScheduleRequest
 import com.proyecto.ganapp.domain.usecase.notificacion.CreateAnimalNotificationScheduleResult
@@ -64,15 +65,16 @@ class AnimalNotificationScheduleViewModel @AssistedInject constructor(
                     return@launch
                 }
                 getTemplates().collect { templates ->
+                    val selectable = templates.filter { it.tipo != TipoNotificacion.CICLO_REPRODUCTIVO }
                     _uiState.update { state ->
                         val selected = state.selectedTemplateId?.takeIf { id ->
-                            templates.any { it.idPlantilla == id }
+                            selectable.any { it.idPlantilla == id }
                         }
                         state.copy(
-                            load = if (templates.isEmpty()) {
+                            load = if (selectable.isEmpty()) {
                                 AnimalScheduleLoad.Empty(animal)
                             } else {
-                                AnimalScheduleLoad.Ready(animal, templates)
+                                AnimalScheduleLoad.Ready(animal, selectable)
                             },
                             selectedTemplateId = selected,
                             step = if (selected == null) AnimalScheduleStep.SelectTemplate else state.step,

@@ -1,10 +1,12 @@
 package com.proyecto.ganapp.core.notifications
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -63,7 +65,7 @@ class AndroidNotificationScheduleAlarmServiceTest {
     }
 
     @Test
-    fun scheduleValidoRegistraAlarmaAndroidInexactaYWakeup() {
+    fun scheduleValidoRegistraAlarmaAndroidWakeupSegunPermisoExacto() {
         val probe = AccessProbe(context)
         val candidate = AndroidNotificationScheduleAlarmService(probe)
         assertEquals(ScheduleAlarmResult.Scheduled, candidate.schedule(firstId, future()))
@@ -71,8 +73,14 @@ class AndroidNotificationScheduleAlarmServiceTest {
         assertNotNull(find(firstId))
         val block = alarmBlock(firstId)
         assertTrue(block, block.contains("RTC_WAKEUP"))
-        assertTrue(block, block.contains("window="))
-        assertFalse(block, block.contains("window=0 "))
+        val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
+        if (exact) {
+            assertTrue(block, block.contains("window=0"))
+        } else {
+            assertTrue(block, block.contains("window="))
+            assertFalse(block, block.contains("window=0 "))
+        }
     }
 
     @Test

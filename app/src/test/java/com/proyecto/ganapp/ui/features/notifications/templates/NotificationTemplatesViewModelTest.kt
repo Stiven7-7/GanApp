@@ -140,7 +140,10 @@ class NotificationTemplatesViewModelTest {
         advanceUntilIdle()
         f.vm.openEdit(11L)
         advanceUntilIdle()
-        assertEquals(TemplateEditor(11L, TemplateForm("Vacuna", TipoNotificacion.VACUNACION)), f.vm.uiState.value.editor)
+        assertEquals(
+            TemplateEditor(11L, TemplateForm("Vacuna", TipoNotificacion.VACUNACION), TipoNotificacion.VACUNACION),
+            f.vm.uiState.value.editor,
+        )
         f.vm.changeTitle("Editada")
         f.vm.changeType(TipoNotificacion.CICLO_REPRODUCTIVO)
         f.vm.save()
@@ -271,6 +274,30 @@ class NotificationTemplatesViewModelTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { f.vm.events.collect { second += it } }
         advanceUntilIdle()
         assertTrue(second.isEmpty())
+    }
+
+    @Test fun createHidesReproductiveCycleAndEditKeepsHistoricalType() {
+        val created = TemplateEditor()
+        assertEquals(
+            listOf(TipoNotificacion.VACUNACION, TipoNotificacion.ALIMENTACION),
+            created.selectableTypes(),
+        )
+        val historical = TemplateEditor(
+            templateId = 4L,
+            form = TemplateForm("Celo", TipoNotificacion.CICLO_REPRODUCTIVO),
+            persistedTipo = TipoNotificacion.CICLO_REPRODUCTIVO,
+        )
+        assertEquals(
+            listOf(
+                TipoNotificacion.VACUNACION,
+                TipoNotificacion.ALIMENTACION,
+                TipoNotificacion.CICLO_REPRODUCTIVO,
+            ),
+            historical.selectableTypes(),
+        )
+        val renamed = historical.copy(form = historical.form.copy(titulo = "Parto"))
+        assertEquals(TipoNotificacion.CICLO_REPRODUCTIVO, renamed.form.tipo)
+        assertTrue(renamed.selectableTypes().contains(TipoNotificacion.CICLO_REPRODUCTIVO))
     }
 
     @Test fun formHasOnlyTitleAndEnumTypeAndScreenHasNoSchedulingInputs() {

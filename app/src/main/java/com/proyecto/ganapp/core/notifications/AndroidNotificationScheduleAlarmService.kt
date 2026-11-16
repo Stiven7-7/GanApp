@@ -3,6 +3,7 @@ package com.proyecto.ganapp.core.notifications
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
+import android.os.Build
 import com.proyecto.ganapp.domain.service.NotificationScheduleAlarmService
 import com.proyecto.ganapp.domain.service.ScheduleAlarmCancelResult
 import com.proyecto.ganapp.domain.service.ScheduleAlarmResult
@@ -27,7 +28,11 @@ class AndroidNotificationScheduleAlarmService @Inject constructor(
                 NotificationScheduleAlarmIntentContract.intent(context, scheduleId),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            if (canScheduleExact(manager)) {
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            } else {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            }
             ScheduleAlarmResult.Scheduled
         } catch (exception: CancellationException) {
             throw exception
@@ -56,6 +61,14 @@ class AndroidNotificationScheduleAlarmService @Inject constructor(
             throw exception
         } catch (exception: Exception) {
             ScheduleAlarmCancelResult.Failure(exception)
+        }
+    }
+
+    private fun canScheduleExact(manager: AlarmManager): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            manager.canScheduleExactAlarms()
+        } else {
+            true
         }
     }
 }

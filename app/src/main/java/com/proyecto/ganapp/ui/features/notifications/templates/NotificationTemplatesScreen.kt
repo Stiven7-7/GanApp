@@ -290,9 +290,9 @@ private fun TemplatesListHeader() {
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.xxs)) {
-                    Text("Automatiza tu calendario", style = MaterialTheme.typography.titleMedium)
+                    Text("Organiza los cuidados de tus animales", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Define recordatorios reutilizables para aplicar a tus animales en lote o individualmente.",
+                        "Crea recordatorios reutilizables y programa notificaciones para cada animal de tu finca.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -443,7 +443,7 @@ private fun TemplateEditorForm(
             modifier = Modifier.semantics { heading() },
         )
         Column(verticalArrangement = Arrangement.spacedBy(GanAppSpacing.sm)) {
-            TipoNotificacion.entries.forEach { type ->
+            editor.selectableTypes().forEach { type ->
                 TemplateTypeOption(
                     type = type,
                     selected = editor.form.tipo == type,
